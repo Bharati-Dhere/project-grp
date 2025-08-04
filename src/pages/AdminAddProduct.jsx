@@ -1,0 +1,183 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { addProduct, addAccessory } from "../utils/api";
+
+const AdminAddProduct = () => {
+  const [productType, setProductType] = useState("Product");
+  const [product, setProduct] = useState({
+    name: "",
+    price: "",
+    images: [], // Array of base64 strings
+    category: "",
+    brand: "",
+    color: "",
+    rating: "",
+    description: "",
+    offer: false,
+    offerPrice: "",
+    discountPercent: "",
+    bestSeller: false,
+    freeDelivery: false,
+    deliveryPrice: "",
+    inStock: true,
+    stock: 10,
+    size: "",
+    tags: ""
+  });
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setProduct((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  // Handle multiple image upload
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    // Only allow up to 3 images total
+    const maxImages = 3;
+    const currentImages = product.images || [];
+    const remainingSlots = maxImages - currentImages.length;
+    const filesToAdd = files.slice(0, remainingSlots);
+    const readers = filesToAdd.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+    Promise.all(readers).then(imgs => {
+      const newImages = [...currentImages, ...imgs].slice(0, maxImages);
+      setProduct(prev => ({ ...prev, images: newImages }));
+      setImagePreviews(newImages);
+    });
+  };
+
+  // Remove a selected image
+  const handleRemoveImage = (idx) => {
+    const updatedImages = product.images.filter((_, i) => i !== idx);
+    setProduct(prev => ({ ...prev, images: updatedImages }));
+    setImagePreviews(updatedImages);
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    const newProduct = {
+      ...product,
+      price: Number(product.price),
+      rating: Number(product.rating),
+      offerPrice: product.offer ? Number(product.offerPrice) : undefined,
+      discountPercent: product.offer ? Number(product.discountPercent) : undefined,
+      bestSeller: !!product.bestSeller,
+      freeDelivery: !!product.freeDelivery,
+      deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
+      inStock: !!product.inStock,
+      size: product.size,
+      tags: product.tags,
+      images: product.images || []
+    };
+    try {
+      if (productType === "Product") {
+        await addProduct(newProduct);
+      } else {
+        await addAccessory(newProduct);
+      }
+      navigate("/admin/existing-products");
+    } catch (err) {
+      alert("Error adding item. Please try again.");
+    }
+  };
+
+  const categoryOptions = ["Smartphones", "Smartwatches", "Tablets", "Laptops", "Accessories", "Fashion", "Home", "Electronics"];
+  const brandOptions = ["Apple", "Samsung", "OnePlus", "HP", "Dell", "Lenovo", "Boat", "Sony", "Other"];
+  const colorOptions = ["Black", "Silver", "White", "Blue", "Green", "Red", "Yellow", "Other"];
+
+  return (
+    <div className="p-6 max-w-xl mx-auto bg-white rounded shadow-lg">
+      <h2 className="text-2xl font-bold mb-6 text-blue-700">Add New {productType}</h2>
+      <form onSubmit={handleAdd} className="space-y-4">
+        <div className="flex gap-4 mb-2">
+          <label className="font-semibold">Add to:</label>
+          <select className="border p-2 rounded" value={productType} onChange={e => setProductType(e.target.value)}>
+            <option value="Product">Products</option>
+            <option value="Accessory">Accessories</option>
+          </select>
+        </div>
+        <input className="w-full border p-2 rounded" name="name" placeholder="Name" value={product.name} onChange={handleChange} required />
+        <input className="w-full border p-2 rounded" name="price" placeholder="Price" type="number" min="1" value={product.price} onChange={handleChange} required />
+        <input className="w-full border p-2 rounded" name="stock" placeholder="Stock Quantity" type="number" min="0" value={product.stock} onChange={handleChange} required />
+        <div>
+          <label className="block font-semibold mb-1">Product Images (up to 3):</label>
+          <label className="inline-block bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600 transition mb-2">
+            Upload Images
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              style={{ display: "none" }}
+            />
+          </label>
+          <div className="flex gap-2 mt-2">
+            {imagePreviews.map((img, idx) => (
+              <div key={idx} className="relative">
+                <img src={img} alt={`Preview ${idx+1}`} className="w-20 h-20 object-cover rounded border" />
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700"
+                  onClick={() => handleRemoveImage(idx)}
+                  title="Remove image"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <textarea className="w-full border p-2 rounded" name="description" placeholder="Description" value={product.description} onChange={handleChange} />
+        <select className="w-full border p-2 rounded" name="category" value={product.category} onChange={handleChange} required>
+          <option value="">Select Category</option>
+          {categoryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <select className="w-full border p-2 rounded" name="brand" value={product.brand} onChange={handleChange} required>
+          <option value="">Select Brand</option>
+          {brandOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <select className="w-full border p-2 rounded" name="color" value={product.color} onChange={handleChange} required>
+          <option value="">Select Color</option>
+          {colorOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <input className="w-full border p-2 rounded" name="size" placeholder="Size (optional)" value={product.size} onChange={handleChange} />
+        <input className="w-full border p-2 rounded" name="tags" placeholder="Tags (comma separated)" value={product.tags} onChange={handleChange} />
+        <input className="w-full border p-2 rounded" name="rating" placeholder="Rating (1-5)" type="number" min="1" max="5" step="0.1" value={product.rating} onChange={handleChange} required />
+        <div className="flex gap-4 items-center">
+          <label className="flex items-center gap-2"><input type="checkbox" name="offer" checked={product.offer} onChange={handleChange} /> Offer</label>
+          {product.offer && (
+            <>
+              <input className="border p-2 rounded" name="offerPrice" placeholder="Offer Price" type="number" min="1" value={product.offerPrice} onChange={handleChange} />
+              <input className="border p-2 rounded" name="discountPercent" placeholder="Discount %" type="number" min="0" max="100" value={product.discountPercent} onChange={handleChange} />
+            </>
+          )}
+        </div>
+        <div className="flex gap-4 items-center">
+          <label className="flex items-center gap-2"><input type="checkbox" name="bestSeller" checked={product.bestSeller} onChange={handleChange} /> Best Seller</label>
+          <label className="flex items-center gap-2"><input type="checkbox" name="freeDelivery" checked={product.freeDelivery} onChange={handleChange} /> Free Delivery</label>
+          {!product.freeDelivery && (
+            <input className="border p-2 rounded" name="deliveryPrice" placeholder="Delivery Price" type="number" min="0" value={product.deliveryPrice} onChange={handleChange} />
+          )}
+        </div>
+        <label className="flex items-center gap-2"><input type="checkbox" name="inStock" checked={product.inStock} onChange={handleChange} /> In Stock</label>
+        <div className="flex gap-2">
+          <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">Add {productType}</button>
+          <button type="button" className="bg-gray-400 text-white px-4 py-2 rounded" onClick={() => navigate("/admin/existing-products")}>Cancel</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default AdminAddProduct;

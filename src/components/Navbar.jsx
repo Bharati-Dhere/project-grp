@@ -1,0 +1,287 @@
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FiSearch, FiHeart, FiShoppingCart } from "react-icons/fi";
+import { FaUserCircle } from "react-icons/fa";
+import productsData from "../utils/productsData";
+import { getLoggedInUser } from "../utils/authUtils";
+import AuthModal from "./AuthModal";
+
+export default function Navbar() {
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showLoginDropdown, setShowLoginDropdown] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const getCartKey = (user) => user?.email ? `cart_${user.email}` : "cart_guest";
+  const getWishlistKey = (user) => user?.email ? `wishlist_${user.email}` : "wishlist_guest";
+
+  const updateCounts = (currentUser) => {
+    if (!currentUser) {
+      setCartCount(0);
+      setWishlistCount(0);
+      return;
+    }
+    const cartKey = getCartKey(currentUser);
+    const wishlistKey = getWishlistKey(currentUser);
+    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
+    setCartCount(cart.length);
+    setWishlistCount(wishlist.length);
+  };
+
+  useEffect(() => {
+    const loggedInUser = getLoggedInUser();
+    setUser(loggedInUser);
+    updateCounts(loggedInUser);
+  }, [location]);
+
+  useEffect(() => {
+    const handleStorage = (e) => {
+      const loggedInUser = getLoggedInUser();
+      if ([getCartKey(loggedInUser), getWishlistKey(loggedInUser)].includes(e.key)) {
+        setUser(loggedInUser);
+        updateCounts(loggedInUser);
+      }
+    };
+    const handleCustom = () => {
+      const loggedInUser = getLoggedInUser();
+      setUser(loggedInUser);
+      updateCounts(loggedInUser);
+    };
+    const handleUserSwitched = () => {
+      const loggedInUser = getLoggedInUser();
+      setUser(loggedInUser);
+      updateCounts(loggedInUser);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("cartWishlistUpdated", handleCustom);
+    window.addEventListener("userSwitched", handleUserSwitched);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("cartWishlistUpdated", handleCustom);
+      window.removeEventListener("userSwitched", handleUserSwitched);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    const loggedIn = JSON.parse(localStorage.getItem("loggedInUser"));
+    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
+    let filtered = loggedIn ? addedAccounts.filter(e => e !== loggedIn.email) : addedAccounts;
+    localStorage.setItem("addedAccounts", JSON.stringify(filtered));
+    let sessions = JSON.parse(localStorage.getItem("userSessions")) || {};
+    if (loggedIn && sessions[loggedIn.email]) {
+      delete sessions[loggedIn.email];
+      localStorage.setItem("userSessions", JSON.stringify(sessions));
+    }
+    localStorage.removeItem("loggedInUser");
+
+    if (filtered.length > 0) {
+      const users = JSON.parse(localStorage.getItem("users")) || [];
+      const nextUser = users.find(u => u.email === filtered[0]);
+      if (nextUser) {
+        sessions[nextUser.email] = { active: true, timestamp: Date.now() };
+        localStorage.setItem("userSessions", JSON.stringify(sessions));
+        localStorage.setItem("loggedInUser", JSON.stringify(nextUser));
+        setUser(nextUser);
+        updateCounts(nextUser);
+        navigate("/profile");
+        return;
+      }
+    }
+
+    setUser(null);
+    setCartCount(0);
+    setWishlistCount(0);
+    navigate("/");
+  };
+
+  return (
+    <>
+      <nav className="bg-white shadow-md sticky top-0 z-50 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link to="/" className="text-2xl font-bold text-blue-700 hover:text-black transition-colors duration-200">
+            MobileStore
+          </Link>
+
+          <div className="hidden md:flex space-x-6">
+            {["/", "/products", "/accessories", "/review", "/help"].map((path, i) => {
+  const labels = ["Home", "Products", "Accessories", "Reviews", "Help"];
+  // Only Home uses exact match, others use startsWith
+  const isActive =
+    path === "/"
+      ? location.pathname === "/"
+      : location.pathname === path || location.pathname.startsWith(path + "/");
+  return (
+    <Link
+      key={i}
+      to={path}
+      className={`px-2 py-1 rounded transition-colors duration-200 font-medium border-b-2 ${
+        isActive
+          ? "text-blue-700 bg-blue-50 border-blue-700"
+          : "text-gray-700 hover:text-black hover:bg-gray-100 border-transparent"
+      }`}
+    >
+      {labels[i]}
+    </Link>
+  );
+})}
+          </div>
+
+          <div className="flex items-center space-x-4 text-xl">
+            <form
+              className="relative flex items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  setShowSearch(false);
+                  setSearchQuery("");
+                }
+              }}
+            >
+              <FiSearch
+                className="cursor-pointer text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110"
+                onClick={() => setShowSearch((v) => !v)}
+              />
+              {showSearch && (
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  placeholder="Search products..."
+                  className="ml-2 px-3 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm w-48 md:w-64 transition-all duration-200"
+                  onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+                />
+              )}
+            </form>
+
+            <span
+              className="relative cursor-pointer"
+              onClick={(e) => {
+                if (!user?.email) {
+                  e.preventDefault();
+                  setShowAuthModal(true);
+                } else {
+                  navigate("/wishlist");
+                }
+              }}
+            >
+              <FiHeart className="text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-pink-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-white">
+                  {wishlistCount}
+                </span>
+              )}
+            </span>
+
+            <span
+              className="relative cursor-pointer"
+              onClick={(e) => {
+                if (!user?.email) {
+                  e.preventDefault();
+                  setShowAuthModal(true);
+                } else {
+                  navigate("/cart");
+                }
+              }}
+            >
+              <FiShoppingCart className="text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-white">
+                  {cartCount}
+                </span>
+              )}
+            </span>
+
+            <span
+              className="cursor-pointer"
+              onClick={(e) => {
+                if (!user?.email) {
+                  e.preventDefault();
+                  setShowAuthModal(true);
+                } else {
+                  navigate("/profile");
+                }
+              }}
+            >
+              <FaUserCircle className="text-2xl text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
+            </span>
+            
+            
+{user ? (
+  <button
+    onClick={handleLogout}
+    className="text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
+  >
+    Logout
+  </button>
+) : (
+  <div className="relative">
+    <button
+      className="text-sm bg-gradient-to-r from-blue-700 to-black text-white px-4 py-1.5 rounded shadow-lg hover:from-black hover:to-blue-700 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
+      onClick={() => setShowLoginDropdown((v) => !v)}
+      aria-haspopup="true"
+      aria-expanded={showLoginDropdown}
+    >
+      Login
+    </button>
+    {/* Overlay for closing dropdown on outside click */}
+    {showLoginDropdown && (
+      <div
+        className="fixed inset-0 z-40"
+        onClick={() => setShowLoginDropdown(false)}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    )}
+    <div
+      className={`absolute right-0 mt-2 w-48 bg-white border border-blue-100 rounded-xl shadow-2xl z-50 transition-all duration-200 origin-top-right
+        ${showLoginDropdown
+          ? "opacity-100 scale-100 pointer-events-auto translate-y-0"
+          : "opacity-0 scale-95 pointer-events-none -translate-y-2"
+        }`}
+      style={{ minWidth: "180px" }}
+    >
+      <button
+        onClick={() => {
+          setShowAuthModal(true);
+          setShowLoginDropdown(false);
+        }}
+        className="block w-full text-left px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-t-xl transition-colors duration-150"
+      >
+        <span className="flex items-center gap-2">
+          <FaUserCircle className="text-lg" />
+          User Login
+        </span>
+      </button>
+      <Link
+        to="/admin/login"
+        className="block px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-b-xl transition-colors duration-150"
+        onClick={() => setShowLoginDropdown(false)}
+      >
+        <span className="flex items-center gap-2">
+          <FaUserCircle className="text-lg" />
+          Admin Login
+        </span>
+      </Link>
+    </div>
+  </div>
+)}
+
+          </div>
+        </div>
+      </nav>
+
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} setUser={setUser} />
+      )}
+    </>
+  );
+}
