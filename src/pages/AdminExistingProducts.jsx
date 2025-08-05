@@ -1,39 +1,118 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import productsData from "../utils/productsData";
-import accessoriesData from "../utils/accessoriesData";
+import { fetchProducts, fetchAccessories, deleteProduct, deleteAccessory } from "../utils/api";
+
+const FIXED_PRODUCT_CATEGORIES = [
+  "Smartphones",
+  "Smartwatches",
+  "Tablets",
+  "Laptops"
+];
+const FIXED_PRODUCT_BRANDS = [
+  "Apple",
+  "Samsung",
+  "OnePlus",
+  "Xiaomi",
+  "Realme",
+  "Oppo",
+  "Vivo",
+  "Lenovo",
+  "HP",
+  "Dell",
+  "Asus"
+];
+const FIXED_ACCESSORY_CATEGORIES = [
+  "Mobile Covers",
+  "Headphones",
+  "USB",
+  "Chargers",
+  "Screen Protectors",
+  "Power Banks",
+  "Bluetooth Speakers",
+  "Smart Bands",
+  "Car Accessories",
+  "Other"
+];
+const FIXED_ACCESSORY_BRANDS = [
+  "Boat",
+  "JBL",
+  "Realme",
+  "Samsung",
+  "MI",
+  "Portronics",
+  "Noise",
+  "OnePlus",
+  "Sony",
+  "Other"
+];
 
 const AdminExistingProducts = () => {
   const [type, setType] = useState("Product");
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [productCount, setProductCount] = useState(0);
+  const [accessoryCount, setAccessoryCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (type === "Product") {
-      const stored = localStorage.getItem("products");
-      setItems(stored ? JSON.parse(stored) : productsData);
+      fetchProducts().then((data) => {
+        setItems(data);
+        setProductCount(data.length);
+        setCategories(FIXED_PRODUCT_CATEGORIES);
+        setBrands(FIXED_PRODUCT_BRANDS);
+      });
     } else {
-      const stored = localStorage.getItem("accessories");
-      setItems(stored ? JSON.parse(stored) : accessoriesData);
+      fetchAccessories().then((data) => {
+        console.log("Admin Accessories Loaded:", data);
+        if (Array.isArray(data)) {
+          data.forEach(acc => console.log("Accessory ID:", acc._id || acc.id, "Name:", acc.name));
+        }
+        setItems(data);
+        setAccessoryCount(data.length);
+        setCategories(FIXED_ACCESSORY_CATEGORIES);
+        setBrands(FIXED_ACCESSORY_BRANDS);
+      });
     }
   }, [type]);
 
   const handleEdit = (id) => {
-    navigate(`/admin/edit-product/${id}?type=${type}`);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete this ${type.toLowerCase()}?`)) {
-      const updated = items.filter((p) => p.id !== id);
-      setItems(updated);
-      localStorage.setItem(type === "Product" ? "products" : "accessories", JSON.stringify(updated));
+    if (type === "Product") {
+      navigate(`/admin/edit-product/${id}?type=Product`);
+    } else {
+      navigate(`/admin/edit-product/${id}?type=Accessory`);
     }
   };
+
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete this ${type.toLowerCase()}?`)) {
+      if (type === "Product") {
+        await deleteProduct(id);
+        const data = await fetchProducts();
+        setItems(data);
+        setProductCount(data.length);
+      } else {
+        await deleteAccessory(id);
+        const data = await fetchAccessories();
+        setItems(data);
+        setAccessoryCount(data.length);
+      }
+    }
+  };
+
+  // productCount and accessoryCount now come from backend fetch
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded shadow-lg">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-blue-700">Existing {type}s</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-blue-700">Existing {type}s</h2>
+          <div className="text-sm text-gray-600 mt-2">
+            <span className="mr-4">Admin Products: <span className="font-bold">{productCount}</span></span>
+            <span>Admin Accessories: <span className="font-bold">{accessoryCount}</span></span>
+          </div>
+        </div>
         <div className="flex gap-4 items-center">
           <select className="border p-2 rounded" value={type} onChange={e => setType(e.target.value)}>
             <option value="Product">Products</option>
@@ -61,10 +140,10 @@ const AdminExistingProducts = () => {
           </thead>
           <tbody>
             {items.map((p) => (
-              <tr key={p.id} className="border-t border-gray-300 hover:bg-gray-50">
+              <tr key={p._id || p.id} className="border-t border-gray-300 hover:bg-gray-50">
                 <td className="p-2">
-                  {p.images && p.images.length > 0 ? (
-                    <img src={p.images[0]} alt={p.name} className="w-16 h-16 object-cover rounded border" />
+                  {p.image ? (
+                    <img src={p.image} alt={p.name} className="w-16 h-16 object-cover rounded border" />
                   ) : (
                     <span className="text-gray-400">No Image</span>
                   )}
@@ -75,12 +154,12 @@ const AdminExistingProducts = () => {
                 <td className="p-2">{p.color || "-"}</td>
                 <td className="p-2">₹{p.price}</td>
                 <td className="p-2">{p.rating || "-"}</td>
-                <td className="p-2">{p.offer ? `₹${p.offerPrice} (${p.discountPercent}% off)` : "-"}</td>
-                <td className="p-2">{p.bestSeller ? "Yes" : "No"}</td>
+                <td className="p-2">{p.isOffer ? "Offer" : "-"}</td>
+                <td className="p-2">{p.isBestSeller ? "Yes" : "No"}</td>
                 <td className="p-2">{p.inStock ? "In Stock" : "Out of Stock"}</td>
                 <td className="p-2 flex gap-2">
-                  <button className="bg-blue-500 text-white px-3 py-1 rounded" onClick={() => handleEdit(p.id)}>Edit</button>
-                  <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={() => handleDelete(p.id)}>Delete</button>
+                  <button className="bg-blue-500 text-white px-3 py-1 rounded" onClick={() => handleEdit(p._id || p.id)}>Edit</button>
+                  <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={() => handleDelete(p._id || p.id)}>Delete</button>
                 </td>
               </tr>
             ))}

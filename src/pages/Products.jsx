@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getLoggedInUser } from "../utils/authUtils";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
-import { fetchProducts } from "../utils/api";
 import FilterSidebar from "../components/FilterSidebar";
 import SortBar from "../components/SortBar";
 import FilterTags from "../components/FilterTags";
@@ -33,7 +32,16 @@ const Products = () => {
   const [authModalReason, setAuthModalReason] = useState("");
 
   useEffect(() => {
-    fetchProducts().then((data) => setProducts(data));
+    async function fetchProducts() {
+      try {
+        const res = await fetch("http://localhost:5000/api/products");
+        const data = await res.json();
+        setProducts(data);
+      } catch (err) {
+        setProducts([]);
+      }
+    }
+    fetchProducts();
     const user = getLoggedInUser();
     const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
     const wishlistKey = user?.email ? `wishlist_${user.email}` : 'wishlist_guest';
@@ -52,9 +60,9 @@ const Products = () => {
     if (filters.price)
       result = result.filter(p => p.price >= filters.price.min && p.price <= filters.price.max);
     if (filters.offer.length)
-      result = result.filter(p => p.isOffer);
+      result = result.filter(p => p.isOffer === true || p.isOffer === 'Yes');
     if (filters.bestSeller.length)
-      result = result.filter(p => p.isBestSeller);
+      result = result.filter(p => p.isBestSeller === true || p.isBestSeller === 'Yes');
     if (filters.color && filters.color.length)
       result = result.filter(p => filters.color.includes(p.color));
     if (filters.size && filters.size.length)
@@ -190,19 +198,19 @@ const Products = () => {
             .filter(product => product.category !== "Mobile Accessories")
             .map((product) => (
               <ProductCard
-                key={product.id}
+                key={product._id || product.id}
                 product={product}
-                onClick={() => handleCardClick(product.id)}
+                detailsPath="productdetails"
+                onClick={() => handleCardClick(product._id)}
                 showBadges={true}
-                inCart={!!cart.find((c) => c.id === product.id)}
-                inWishlist={!!wishlist.find((w) => w.id === product.id)}
+                inCart={!!cart.find((c) => (c._id || c.id) === (product._id || product.id))}
+                inWishlist={!!wishlist.find((w) => (w._id || w.id) === (product._id || product.id))}
                 onAddToCart={() => handleAddToCart(product)}
-                onRemoveFromCart={() => handleRemoveFromCart(product.id)}
+                onRemoveFromCart={() => handleRemoveFromCart(product._id || product.id)}
                 onAddToWishlist={() => handleAddToWishlist(product)}
-                onRemoveFromWishlist={() => handleRemoveFromWishlist(product.id)}
+                onRemoveFromWishlist={() => handleRemoveFromWishlist(product._id || product.id)}
                 onOrderNow={() => handleGoToOrderNow(product)}
                 showActions={true}
-                detailsPath="product" 
                 gridView={gridView}
               />
             ))}

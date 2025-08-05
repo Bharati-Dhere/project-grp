@@ -77,8 +77,9 @@ export default function ProductCard({
       return;
     }
     // If this is an accessory, go to accessories details page
-    // 
-    navigate(`/${detailsPath}/${product.id}`); 
+    // Use _id if available, else id
+    const productId = product._id || product.id;
+    navigate(`/${detailsPath}/${productId}`);
   };
 
   return (

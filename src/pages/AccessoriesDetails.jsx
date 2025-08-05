@@ -9,19 +9,55 @@ const AccessoriesDetails = () => {
   const [accessory, setAccessory] = useState(null);
   const [mainImage, setMainImage] = useState("");
   const [amount, setAmount] = useState(1);
+  const [userRating, setUserRating] = useState(5);
+  const [showToast, setShowToast] = useState(false);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [avgRating, setAvgRating] = useState(null);
   const [isInCart, setIsInCart] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const stored = localStorage.getItem("accessories");
-    const accessories = stored ? JSON.parse(stored) : accessoriesData;
-    const found = accessories.find((a) => String(a.id) === String(id));
-    setAccessory(found);
-    setMainImage(found?.images ? found.images[0] : found?.image);
-    // Cart & Wishlist logic (simplified)
+    async function fetchAccessory() {
+      try {
+        const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
+        const data = await res.json();
+        setAccessory(data);
+        setMainImage(data?.images ? data.images[0] : data?.image);
+        setRatingCount(data.ratingCount || 0);
+        setAvgRating(data.avgRating || null);
+      } catch (err) {
+        setAccessory(null);
+      }
+    }
+    fetchAccessory();
     setIsInCart(false);
     setIsInWishlist(false);
   }, [id]);
+
+  const handleAddRating = async () => {
+    if (!user || !user.email) {
+      alert("Please log in to rate.");
+      return;
+    }
+    try {
+      await fetch(`http://localhost:5000/api/accessories/${id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: user.email, value: userRating })
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      // Refetch accessory to update rating
+      const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
+      const data = await res.json();
+      setAccessory(data);
+      setRatingCount(data.ratingCount || 0);
+      setAvgRating(data.avgRating || null);
+    } catch (err) {
+      alert("Error submitting rating");
+    }
+  };
 
   if (!accessory) return <div className="p-6">Accessory not found.</div>;
 

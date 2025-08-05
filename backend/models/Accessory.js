@@ -8,7 +8,7 @@ const accessorySchema = new mongoose.Schema({
   category: String,
   brand: String,
   color: String,
-  rating: Number,
+  ratings: [{ user: String, value: Number }], // Array of user ratings
   inStock: Boolean,
   stock: Number,
   isOffer: Boolean,

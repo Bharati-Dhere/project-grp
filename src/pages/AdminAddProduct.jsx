@@ -70,21 +70,39 @@ const AdminAddProduct = () => {
       ...product,
       price: Number(product.price),
       rating: Number(product.rating),
+      isOffer: !!product.offer,
+      isBestSeller: !!product.bestSeller,
       offerPrice: product.offer ? Number(product.offerPrice) : undefined,
       discountPercent: product.offer ? Number(product.discountPercent) : undefined,
-      bestSeller: !!product.bestSeller,
       freeDelivery: !!product.freeDelivery,
       deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
       inStock: !!product.inStock,
       size: product.size,
       tags: product.tags,
-      images: product.images || []
+      images: product.images || [],
+      image: (product.images && product.images.length > 0) ? product.images[0] : ""
     };
     try {
       if (productType === "Product") {
         await addProduct(newProduct);
       } else {
-        await addAccessory(newProduct);
+        // Ensure boolean fields for accessories
+        const accessoryData = {
+          name: product.name,
+          price: Number(product.price),
+          image: (product.images && product.images.length > 0) ? product.images[0] : "",
+          images: product.images || [],
+          category: product.category,
+          brand: product.brand,
+          color: product.color,
+          rating: Number(product.rating),
+          inStock: !!product.inStock,
+          stock: Number(product.stock),
+          isOffer: !!product.offer,
+          isBestSeller: !!product.bestSeller,
+          description: product.description
+        };
+        await addAccessory(accessoryData);
       }
       navigate("/admin/existing-products");
     } catch (err) {
@@ -92,8 +110,34 @@ const AdminAddProduct = () => {
     }
   };
 
-  const categoryOptions = ["Smartphones", "Smartwatches", "Tablets", "Laptops", "Accessories", "Fashion", "Home", "Electronics"];
-  const brandOptions = ["Apple", "Samsung", "OnePlus", "HP", "Dell", "Lenovo", "Boat", "Sony", "Other"];
+  const PRODUCT_CATEGORIES = ["Smartphones", "Smartwatches", "Tablets", "Laptops"];
+  const PRODUCT_BRANDS = ["Apple", "Samsung", "OnePlus", "Xiaomi", "Realme", "Oppo", "Vivo", "Lenovo", "HP", "Dell", "Asus"];
+  const ACCESSORY_CATEGORIES = [
+    "Mobile Covers",
+    "Headphones",
+    "USB",
+    "Chargers",
+    "Screen Protectors",
+    "Power Banks",
+    "Bluetooth Speakers",
+    "Smart Bands",
+    "Car Accessories",
+    "Other"
+  ];
+  const ACCESSORY_BRANDS = [
+    "Boat",
+    "JBL",
+    "Realme",
+    "Samsung",
+    "MI",
+    "Portronics",
+    "Noise",
+    "OnePlus",
+    "Sony",
+    "Other"
+  ];
+  const categoryOptions = productType === "Product" ? PRODUCT_CATEGORIES : ACCESSORY_CATEGORIES;
+  const brandOptions = productType === "Product" ? PRODUCT_BRANDS : ACCESSORY_BRANDS;
   const colorOptions = ["Black", "Silver", "White", "Blue", "Green", "Red", "Yellow", "Other"];
 
   return (

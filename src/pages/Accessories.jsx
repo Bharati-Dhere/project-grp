@@ -41,9 +41,9 @@ export default function Accessories() {
     if (filters.color && filters.color.length)
       result = result.filter(a => a.color && filters.color.includes(a.color));
     if (filters.offer && filters.offer.length)
-      result = result.filter(a => a.isOffer && filters.offer.some(val => a.isOffer === val || (val === 'Yes' && a.isOffer === true)));
+      result = result.filter(a => a.isOffer === true || a.isOffer === 'Yes');
     if (filters.bestSeller && filters.bestSeller.length)
-      result = result.filter(a => a.isBestSeller && filters.bestSeller.some(val => a.isBestSeller === val || (val === 'Yes' && a.isBestSeller === true)));
+      result = result.filter(a => a.isBestSeller === true || a.isBestSeller === 'Yes');
     if (filters.rating)
       result = result.filter(a => a.rating >= filters.rating);
     if (filters.price)
@@ -116,9 +116,37 @@ export default function Accessories() {
     navigate(`/accessoriesdetails/${id}`);
   };
 
-  // Dynamically compute sidebar options from fetched accessories
-  const ACCESSORY_CATEGORIES = getUnique(accessories, "category");
-  const ACCESSORY_BRANDS = getUnique(accessories, "brand");
+// Only show accessory-related categories and brands
+const FIXED_ACCESSORY_CATEGORIES = [
+  "Mobile Covers",
+  "Headphones",
+  "USB",
+  "Chargers",
+  "Screen Protectors",
+  "Power Banks",
+  "Bluetooth Speakers",
+  "Smart Bands",
+  "Car Accessories",
+  "Other"
+];
+const FIXED_ACCESSORY_BRANDS = [
+  "Boat",
+  "JBL",
+  "Realme",
+  "Samsung",
+  "MI",
+  "Portronics",
+  "Noise",
+  "OnePlus",
+  "Sony",
+  "Other"
+];
+const ACCESSORY_CATEGORIES = accessories.length
+  ? getUnique(accessories, "category").filter(cat => FIXED_ACCESSORY_CATEGORIES.includes(cat))
+  : FIXED_ACCESSORY_CATEGORIES;
+const ACCESSORY_BRANDS = accessories.length
+  ? getUnique(accessories, "brand").filter(brand => FIXED_ACCESSORY_BRANDS.includes(brand))
+  : FIXED_ACCESSORY_BRANDS;
   const ACCESSORY_COLORS = getUnique(accessories, "color");
   const ACCESSORY_OFFERS = getUnique(accessories, "isOffer");
   const ACCESSORY_BESTSELLER = getUnique(accessories, "isBestSeller");
@@ -161,22 +189,22 @@ export default function Accessories() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {filteredAccessories
             .map((accessory) => {
-              const inCart = cart.some((c) => String(c.id) === String(accessory.id));
-              const inWishlist = wishlist.some((w) => String(w.id) === String(accessory.id));
+              const inCart = cart.some((c) => String(c._id || c.id) === String(accessory._id || accessory.id));
+              const inWishlist = wishlist.some((w) => String(w._id || w.id) === String(accessory._id || accessory.id));
               const detailsPath = "accessories";
               return (
                 <ProductCard
-                  key={accessory.id}
+                  key={accessory._id || accessory.id}
                   product={accessory}
                   inCart={inCart}
                   inWishlist={inWishlist}
                   onAddToCart={() => handleAddToCart(accessory)}
-                  onRemoveFromCart={() => handleRemoveFromCart(accessory)}
+                  onRemoveFromCart={() => handleRemoveFromCart(accessory._id || accessory.id)}
                   onAddToWishlist={() => handleAddToWishlist(accessory)}
-                  onRemoveFromWishlist={() => handleRemoveFromWishlist(accessory)}
+                  onRemoveFromWishlist={() => handleRemoveFromWishlist(accessory._id || accessory.id)}
                   showActions={true}
                   detailsPath={detailsPath}
-                  onClick={() => handleCardClick(accessory.id)}
+                  onClick={() => handleCardClick(accessory._id || accessory.id)}
                   showBadges={true}
                 />
               );

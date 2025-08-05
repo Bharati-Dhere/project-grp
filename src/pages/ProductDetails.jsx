@@ -6,44 +6,36 @@ import { getLoggedInUser } from "../utils/authUtils";
 import AuthModal from "../components/AuthModal";
 import ProductCard from '../components/ProductCard';
 
-function calculateRatingPercentages(reviews) {
-  const total = reviews.length;
-  const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-  reviews.forEach((r) => {
-    const rounded = Math.floor(r.rating);
-    if (rounded >= 1 && rounded <= 5) {
-      counts[rounded] += 1;
-    }
-  });
-  const percentages = {};
-  for (let i = 5; i >= 1; i--) {
-    const count = counts[i];
-    const percent = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-    percentages[i] = percent;
-  }
-  return percentages;
-}
-
 function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [mainImage, setMainImage] = useState("");
   const [amount, setAmount] = useState(1);
-  const [reviews, setReviews] = useState([]);
-  const [userReview, setUserReview] = useState("");
   const [userRating, setUserRating] = useState(5);
   const [showToast, setShowToast] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
+  const [ratingCount, setRatingCount] = useState(0);
+  const [avgRating, setAvgRating] = useState(null);
   const user = getLoggedInUser();
 
   useEffect(() => {
-    const found = productsData.find((p) => String(p.id) === String(id));
-    setProduct(found);
-    setMainImage(found?.images ? found.images[0] : found?.image);
+    async function fetchProduct() {
+      try {
+        const res = await fetch(`http://localhost:5000/api/products/${id}`);
+        const data = await res.json();
+        setProduct(data);
+        setMainImage(data?.images ? data.images[0] : data?.image);
+        setRatingCount(data.ratingCount || 0);
+        setAvgRating(data.avgRating || null);
+      } catch (err) {
+        setProduct(null);
+      }
+    }
+    fetchProduct();
     // Cart & Wishlist logic
     const user = getLoggedInUser();
     const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
@@ -52,13 +44,32 @@ function ProductDetails() {
     const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
     setIsInCart(cart.some((c) => String(c.id) === String(id)));
     setIsInWishlist(wishlist.some((w) => String(w.id) === String(id)));
-    const stored = JSON.parse(localStorage.getItem(`reviews_${id}`)) || [];
-    const filtered = stored.filter((r) => r.userEmail && r.userName);
-    localStorage.setItem(`reviews_${id}`, JSON.stringify(filtered));
-    setReviews(filtered);
   }, [id]);
 
-  const alreadyReviewed = user && reviews.some((r) => r.userEmail === user.email);
+  const handleAddRating = async () => {
+    if (!user || !user.email) {
+      setAuthModalReason("review");
+      setShowAuthModal(true);
+      return;
+    }
+    try {
+      await fetch(`http://localhost:5000/api/products/${id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: user.email, value: userRating })
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      // Refetch product to update rating
+      const res = await fetch(`http://localhost:5000/api/products/${id}`);
+      const data = await res.json();
+      setProduct(data);
+      setRatingCount(data.ratingCount || 0);
+      setAvgRating(data.avgRating || null);
+    } catch (err) {
+      alert("Error submitting rating");
+    }
+  };
 
   // Restrict guests from ordering
   const handleOrder = () => {
@@ -77,34 +88,6 @@ function ProductDetails() {
     );
     localStorage.setItem("products", JSON.stringify(products));
     navigate("/ordernow", { state: { product, amount } });
-  };
-
-  // Restrict guests from adding reviews
-  const handleAddReview = () => {
-    if (!user || !user.email || !user.name) {
-      setAuthModalReason("review");
-      setShowAuthModal(true);
-      return;
-    }
-    if (!userReview.trim() || alreadyReviewed) return;
-    const newReview = {
-      text: userReview,
-      rating: parseFloat(userRating),
-      date: new Date().toLocaleDateString(),
-      productId: id,
-      productName: product.name,
-      userEmail: user.email,
-      userName: user.name,
-    };
-    const updated = [...reviews, newReview];
-    setReviews(updated);
-    localStorage.setItem(`reviews_${id}`, JSON.stringify(updated));
-    const adminReviews = JSON.parse(localStorage.getItem("adminReviews")) || [];
-    localStorage.setItem("adminReviews", JSON.stringify([...adminReviews, newReview]));
-    setUserReview("");
-    setUserRating(5);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
   };
 
   // Restrict guests from adding/removing cart/wishlist
@@ -161,7 +144,8 @@ function ProductDetails() {
     setIsInWishlist(false);
   };
 
-  const ratingSummary = calculateRatingPercentages(reviews);
+  // Use backend rating summary if available
+  const ratingSummary = product?.ratingSummary || {};
 
   if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
@@ -268,113 +252,15 @@ function ProductDetails() {
               <span className="w-10 text-right text-sm font-medium">{star}★</span>
               <div className="w-full bg-gray-200 rounded h-3">
                 <div
-                  style={{ width: `${ratingSummary[star]}%` }}
+                  style={{ width: `${ratingSummary[star] || 0}%` }}
                   className="h-full bg-yellow-400 rounded"
                 ></div>
               </div>
-              <span className="w-12 text-sm text-gray-600">{ratingSummary[star]}%</span>
+              <span className="w-12 text-sm text-gray-600">{ratingSummary[star] || 0}%</span>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Reviews Section */}
-      <div className="mt-10">
-        <h3 className="text-xl font-bold mb-4">User Reviews</h3>
-        {reviews.length === 0 ? (
-          <p className="text-gray-500">No reviews yet.</p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {reviews.map((r, idx) => (
-              <div key={idx} className="bg-gray-50 border rounded-lg p-4 shadow">
-                <div className="flex items-center gap-3 mb-2">
-                  <img
-                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${r.userName}`}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <h4 className="font-semibold text-gray-800">{r.userName}</h4>
-                    <p className="text-xs text-gray-500">{r.date}</p>
-                  </div>
-                </div>
-                <p className="text-yellow-500 font-medium mb-1">{r.rating}★</p>
-                <p className="text-gray-700">{r.text}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Add Review Section */}
-      <div className="border-t mt-10 pt-6">
-        <h4 className="font-semibold mb-2">Add Your Review</h4>
-        {!user && (
-          <p className="text-sm text-red-500 mb-2">
-            Please{" "}
-            <button
-              onClick={() => {
-                setAuthModalReason("review");
-                setShowAuthModal(true);
-              }}
-              className="text-blue-600 underline hover:text-blue-800"
-            >
-              log in
-            </button>{" "}
-            to write a review.
-          </p>
-        )}
-        {user && alreadyReviewed && (
-          <p className="text-sm text-green-600 mb-2">You already submitted a review.</p>
-        )}
-        <div className="space-y-2">
-          <input
-            type="number"
-            step="0.1"
-            min="1"
-            max="5"
-            value={userRating}
-            onChange={(e) => setUserRating(Number(e.target.value))}
-            className="border px-2 py-1 rounded w-full"
-            placeholder="Rating (1 to 5)"
-          />
-          <textarea
-            value={userReview}
-            onChange={(e) => setUserReview(e.target.value)}
-            rows={3}
-            className="border rounded w-full px-2 py-1"
-            placeholder="Write your review..."
-          />
-          <button
-            onClick={() => {
-              if (!user || !user.email || !user.name) {
-                setAuthModalReason("review");
-                setShowAuthModal(true);
-                return;
-              }
-              handleAddReview();
-            }}
-            className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition"
-            disabled={alreadyReviewed}
-          >
-            Submit Review
-          </button>
-        </div>
-      </div>
-
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          setUser={() => setShowAuthModal(false)}
-          reason={authModalReason}
-        />
-      )}
-
-      {showToast && (
-        <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded shadow-md z-50">
-          Review submitted successfully!
-        </div>
-      )}
 
       {/* Related Products Section */}
       <div className="mt-10">
