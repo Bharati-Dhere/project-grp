@@ -8,7 +8,11 @@ const initialState = {
   category: "",
   brand: "",
   color: "",
-  rating: "",
+  inStock: true,
+  stock: "",
+  isOffer: false,
+  isBestSeller: false,
+  badge: "",
   description: ""
 };
 
@@ -48,7 +52,6 @@ const ProductForm = ({ onSubmit, initialProduct }) => {
     onSubmit({
       ...product,
       price: Number(product.price),
-      rating: Number(product.rating) || 0,
       id: Date.now()
     });
     setProduct(initialState);
@@ -77,7 +80,6 @@ const ProductForm = ({ onSubmit, initialProduct }) => {
       </select>
       <input name="brand" value={product.brand} onChange={handleChange} placeholder="Brand" className="w-full border p-2 rounded" />
       <input name="color" value={product.color} onChange={handleChange} placeholder="Color" className="w-full border p-2 rounded" />
-      <input name="rating" value={product.rating} onChange={handleChange} placeholder="Rating (0-5)" type="number" min="0" max="5" step="0.1" className="w-full border p-2 rounded" />
       <textarea name="description" value={product.description} onChange={handleChange} placeholder="Description" className="w-full border p-2 rounded" />
       <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Product</button>
     </form>

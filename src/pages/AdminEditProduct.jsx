@@ -76,7 +76,6 @@ const AdminEditProduct = () => {
     const updatedProduct = {
       ...product,
       price: Number(product.price),
-      rating: Number(product.rating),
       isOffer: !!product.isOffer,
       isBestSeller: !!product.isBestSeller,
       offerPrice: product.isOffer ? Number(product.offerPrice) : undefined,
@@ -151,7 +150,6 @@ const AdminEditProduct = () => {
           {COLOR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
-        <input className="w-full border p-2" name="rating" placeholder="Rating (1-5)" type="number" min="1" max="5" step="0.1" value={product.rating} onChange={handleChange} required />
         <textarea className="w-full border p-2" name="description" placeholder="Description" value={product.description} onChange={handleChange} />
 
         <div className="flex items-center gap-2">

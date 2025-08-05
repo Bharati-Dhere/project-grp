@@ -11,7 +11,6 @@ const AdminAddProduct = () => {
     category: "",
     brand: "",
     color: "",
-    rating: "",
     description: "",
     offer: false,
     offerPrice: "",
@@ -69,7 +68,6 @@ const AdminAddProduct = () => {
     const newProduct = {
       ...product,
       price: Number(product.price),
-      rating: Number(product.rating),
       isOffer: !!product.offer,
       isBestSeller: !!product.bestSeller,
       offerPrice: product.offer ? Number(product.offerPrice) : undefined,
@@ -86,7 +84,6 @@ const AdminAddProduct = () => {
       if (productType === "Product") {
         await addProduct(newProduct);
       } else {
-        // Ensure boolean fields for accessories
         const accessoryData = {
           name: product.name,
           price: Number(product.price),
@@ -95,7 +92,6 @@ const AdminAddProduct = () => {
           category: product.category,
           brand: product.brand,
           color: product.color,
-          rating: Number(product.rating),
           inStock: !!product.inStock,
           stock: Number(product.stock),
           isOffer: !!product.offer,
@@ -197,7 +193,6 @@ const AdminAddProduct = () => {
         </select>
         <input className="w-full border p-2 rounded" name="size" placeholder="Size (optional)" value={product.size} onChange={handleChange} />
         <input className="w-full border p-2 rounded" name="tags" placeholder="Tags (comma separated)" value={product.tags} onChange={handleChange} />
-        <input className="w-full border p-2 rounded" name="rating" placeholder="Rating (1-5)" type="number" min="1" max="5" step="0.1" value={product.rating} onChange={handleChange} required />
         <div className="flex gap-4 items-center">
           <label className="flex items-center gap-2"><input type="checkbox" name="offer" checked={product.offer} onChange={handleChange} /> Offer</label>
           {product.offer && (
