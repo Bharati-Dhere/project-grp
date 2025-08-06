@@ -1,9 +1,12 @@
 
 import { useState } from "react";
+import { useAuth } from '../context/AuthContext';
+import { signup as apiSignup } from '../utils/api';
 import { toast } from "react-toastify";
 import { FaTimes } from "react-icons/fa";
 
-export default function AuthModal({ onClose, setUser }) {
+export default function AuthModal({ onClose }) {
+  const { user, login } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [loginMobile, setLoginMobile] = useState({ countryCode: "+91", mobile: "", otp: "" });
@@ -25,43 +28,16 @@ export default function AuthModal({ onClose, setUser }) {
   const [loginErrors, setLoginErrors] = useState({});
   const [signupErrors, setSignupErrors] = useState({});
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-    const foundUser = users.find(
-      (user) => user.email === loginData.email.trim()
-    );
-    const errors = {};
-    if (!foundUser) {
-      errors.email = "User not found. Please sign up first.";
-      setLoginErrors(errors);
-      return;
-    }
-    if (foundUser.password !== loginData.password) {
-      errors.password = "Invalid password.";
-      setLoginErrors(errors);
-      return;
-    }
-    // Single device login validation
-    let sessions = JSON.parse(localStorage.getItem("userSessions")) || {};
-    if (sessions[foundUser.email] && sessions[foundUser.email].active) {
-      errors.general = "This account is already logged in on another device or tab.";
-      setLoginErrors(errors);
-      return;
-    }
-    // Mark session as active
-    sessions[foundUser.email] = { active: true, timestamp: Date.now() };
-    localStorage.setItem("userSessions", JSON.stringify(sessions));
-    localStorage.setItem("loggedInUser", JSON.stringify(foundUser));
-    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-    if (!addedAccounts.includes(foundUser.email)) {
-      addedAccounts.push(foundUser.email);
-      localStorage.setItem("addedAccounts", JSON.stringify(addedAccounts));
-    }
-    setUser(foundUser);
-    toast.success(`Welcome back, ${foundUser.name}`);
     setLoginErrors({});
-    onClose();
+    const result = await login(loginData);
+    if (result.success) {
+      toast.success('Welcome back!');
+      onClose();
+    } else {
+      setLoginErrors({ general: result.message });
+    }
   };
 
   const handleLoginSendOtp = () => {
@@ -95,7 +71,6 @@ export default function AuthModal({ onClose, setUser }) {
         addedAccounts.push(matched.email);
         localStorage.setItem("addedAccounts", JSON.stringify(addedAccounts));
       }
-      setUser(matched);
       toast.success(`Welcome back, ${matched.name}`);
       setLoginErrors({});
       onClose();
@@ -133,13 +108,11 @@ export default function AuthModal({ onClose, setUser }) {
     }
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    setSignupErrors({});
+    // Basic validation
     const errors = {};
-    if (users.find((user) => user.email === signupData.email.trim())) {
-      errors.email = "Email already registered.";
-    }
     if (!signupData.name || !signupData.email || !signupData.password || !signupData.confirmPassword) {
       errors.general = "Please fill all fields.";
     }
@@ -149,35 +122,29 @@ export default function AuthModal({ onClose, setUser }) {
     if (signupData.password !== signupData.confirmPassword) {
       errors.confirmPassword = "Passwords do not match.";
     }
-    if (!signupData.mobile) {
-      errors.mobile = "Mobile number is required.";
-    } else if (!signupOtpVerified) {
+    if (!signupOtpVerified) {
       errors.otp = "Please verify your mobile number.";
     }
     if (Object.keys(errors).length > 0) {
       setSignupErrors(errors);
       return;
     }
-    const newUser = {
-      name: signupData.name.trim(),
-      email: signupData.email.trim(),
-      password: signupData.password,
-      countryCode: signupData.countryCode,
-      mobile: signupData.mobile
-    };
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("adminUserUpdates", JSON.stringify(users));
-    toast.success("Signup successful! Please log in");
-    setSignupErrors({});
-    setSignupData({ name: "", email: "", password: "", confirmPassword: "", countryCode: "+91", mobile: "", otp: "" });
-    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-    if (!addedAccounts.includes(newUser.email)) {
-      addedAccounts.push(newUser.email);
-      localStorage.setItem("addedAccounts", JSON.stringify(addedAccounts));
+    try {
+      await apiSignup({
+        name: signupData.name.trim(),
+        email: signupData.email.trim(),
+        password: signupData.password,
+        countryCode: signupData.countryCode,
+        mobile: signupData.mobile
+      });
+      toast.success("Signup successful! Please log in");
+      setSignupErrors({});
+      setSignupData({ name: "", email: "", password: "", confirmPassword: "", countryCode: "+91", mobile: "", otp: "" });
+      setLoginData({ email: signupData.email, password: signupData.password });
+      setIsLogin(true);
+    } catch (err) {
+      setSignupErrors({ general: err.response?.data?.message || 'Signup failed' });
     }
-    setLoginData({ email: newUser.email, password: newUser.password });
-    setIsLogin(true);
   };
 
   return (

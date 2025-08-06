@@ -1,8 +1,10 @@
+import defaultAvatar from '../assets/default-avatar.png';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaTrash, FaHeart, FaRegHeart } from "react-icons/fa";
-import { getLoggedInUser } from "../utils/authUtils";
+
 import AuthModal from "./AuthModal";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProductCard({
   product,
@@ -20,14 +22,14 @@ export default function ProductCard({
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
-  const user = getLoggedInUser();
+  const { user } = useAuth();
   // Always use props for cart/wishlist state so it updates with user/account changes
   const isInCart = !!inCart;
   const isInWishlist = !!inWishlist;
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
-    if (!user || !user.email) {
+    if (!user) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
@@ -43,7 +45,7 @@ export default function ProductCard({
 
   const handleAddToWishlist = (e) => {
     e.stopPropagation();
-    if (!user || !user.email) {
+    if (!user) {
       setAuthModalReason("wishlist");
       setShowAuthModal(true);
       return;
@@ -60,7 +62,7 @@ export default function ProductCard({
   const handleOrderNow = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user || !user.email) {
+    if (!user) {
       setAuthModalReason("order");
       setShowAuthModal(true);
       return;
@@ -136,6 +138,7 @@ export default function ProductCard({
             alt={product.name}
             src={product.image}
             className="w-auto h-full object-contain transition-all duration-500 ease-in-out group-hover:scale-110 rounded-xl overflow-hidden"
+            onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
           />
           {showActions && !pageType && (
             <div className="absolute bottom-2 right-2 z-20">

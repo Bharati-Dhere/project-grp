@@ -1,103 +1,26 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiSearch, FiHeart, FiShoppingCart } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
-import productsData from "../utils/productsData";
-import { getLoggedInUser } from "../utils/authUtils";
 import AuthModal from "./AuthModal";
+import { useAuth } from "../context/AuthContext";
+
 
 export default function Navbar() {
-  const [user, setUser] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const { user, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  // TODO: Replace with cart/wishlist context if available
+  const cartCount = 0;
+  const wishlistCount = 0;
 
-  const getCartKey = (user) => user?.email ? `cart_${user.email}` : "cart_guest";
-  const getWishlistKey = (user) => user?.email ? `wishlist_${user.email}` : "wishlist_guest";
-
-  const updateCounts = (currentUser) => {
-    if (!currentUser) {
-      setCartCount(0);
-      setWishlistCount(0);
-      return;
-    }
-    const cartKey = getCartKey(currentUser);
-    const wishlistKey = getWishlistKey(currentUser);
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    setCartCount(cart.length);
-    setWishlistCount(wishlist.length);
-  };
-
-  useEffect(() => {
-    const loggedInUser = getLoggedInUser();
-    setUser(loggedInUser);
-    updateCounts(loggedInUser);
-  }, [location]);
-
-  useEffect(() => {
-    const handleStorage = (e) => {
-      const loggedInUser = getLoggedInUser();
-      if ([getCartKey(loggedInUser), getWishlistKey(loggedInUser)].includes(e.key)) {
-        setUser(loggedInUser);
-        updateCounts(loggedInUser);
-      }
-    };
-    const handleCustom = () => {
-      const loggedInUser = getLoggedInUser();
-      setUser(loggedInUser);
-      updateCounts(loggedInUser);
-    };
-    const handleUserSwitched = () => {
-      const loggedInUser = getLoggedInUser();
-      setUser(loggedInUser);
-      updateCounts(loggedInUser);
-    };
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("cartWishlistUpdated", handleCustom);
-    window.addEventListener("userSwitched", handleUserSwitched);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("cartWishlistUpdated", handleCustom);
-      window.removeEventListener("userSwitched", handleUserSwitched);
-    };
-  }, []);
-
-  const handleLogout = () => {
-    const loggedIn = JSON.parse(localStorage.getItem("loggedInUser"));
-    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-    let filtered = loggedIn ? addedAccounts.filter(e => e !== loggedIn.email) : addedAccounts;
-    localStorage.setItem("addedAccounts", JSON.stringify(filtered));
-    let sessions = JSON.parse(localStorage.getItem("userSessions")) || {};
-    if (loggedIn && sessions[loggedIn.email]) {
-      delete sessions[loggedIn.email];
-      localStorage.setItem("userSessions", JSON.stringify(sessions));
-    }
-    localStorage.removeItem("loggedInUser");
-
-    if (filtered.length > 0) {
-      const users = JSON.parse(localStorage.getItem("users")) || [];
-      const nextUser = users.find(u => u.email === filtered[0]);
-      if (nextUser) {
-        sessions[nextUser.email] = { active: true, timestamp: Date.now() };
-        localStorage.setItem("userSessions", JSON.stringify(sessions));
-        localStorage.setItem("loggedInUser", JSON.stringify(nextUser));
-        setUser(nextUser);
-        updateCounts(nextUser);
-        navigate("/profile");
-        return;
-      }
-    }
-
-    setUser(null);
-    setCartCount(0);
-    setWishlistCount(0);
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -162,10 +85,11 @@ export default function Navbar() {
               )}
             </form>
 
+
             <span
               className="relative cursor-pointer"
               onClick={(e) => {
-                if (!user?.email) {
+                if (!user) {
                   e.preventDefault();
                   setShowAuthModal(true);
                 } else {
@@ -181,10 +105,11 @@ export default function Navbar() {
               )}
             </span>
 
+
             <span
               className="relative cursor-pointer"
               onClick={(e) => {
-                if (!user?.email) {
+                if (!user) {
                   e.preventDefault();
                   setShowAuthModal(true);
                 } else {
@@ -200,10 +125,11 @@ export default function Navbar() {
               )}
             </span>
 
+
             <span
               className="cursor-pointer"
               onClick={(e) => {
-                if (!user?.email) {
+                if (!user) {
                   e.preventDefault();
                   setShowAuthModal(true);
                 } else {
@@ -213,74 +139,78 @@ export default function Navbar() {
             >
               <FaUserCircle className="text-2xl text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
             </span>
-            
-            
-{user ? (
-  <button
-    onClick={handleLogout}
-    className="text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
-  >
-    Logout
-  </button>
-) : (
-  <div className="relative">
-    <button
-      className="text-sm bg-gradient-to-r from-blue-700 to-black text-white px-4 py-1.5 rounded shadow-lg hover:from-black hover:to-blue-700 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
-      onClick={() => setShowLoginDropdown((v) => !v)}
-      aria-haspopup="true"
-      aria-expanded={showLoginDropdown}
-    >
-      Login
-    </button>
-    {/* Overlay for closing dropdown on outside click */}
-    {showLoginDropdown && (
-      <div
-        className="fixed inset-0 z-40"
-        onClick={() => setShowLoginDropdown(false)}
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-    )}
-    <div
-      className={`absolute right-0 mt-2 w-48 bg-white border border-blue-100 rounded-xl shadow-2xl z-50 transition-all duration-200 origin-top-right
-        ${showLoginDropdown
-          ? "opacity-100 scale-100 pointer-events-auto translate-y-0"
-          : "opacity-0 scale-95 pointer-events-none -translate-y-2"
-        }`}
-      style={{ minWidth: "180px" }}
-    >
-      <button
-        onClick={() => {
-          setShowAuthModal(true);
-          setShowLoginDropdown(false);
-        }}
-        className="block w-full text-left px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-t-xl transition-colors duration-150"
-      >
-        <span className="flex items-center gap-2">
-          <FaUserCircle className="text-lg" />
-          User Login
-        </span>
-      </button>
-      <Link
-        to="/admin/login"
-        className="block px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-b-xl transition-colors duration-150"
-        onClick={() => setShowLoginDropdown(false)}
-      >
-        <span className="flex items-center gap-2">
-          <FaUserCircle className="text-lg" />
-          Admin Login
-        </span>
-      </Link>
-    </div>
-  </div>
-)}
+
+            {user ? (
+              <>
+                <span className="ml-2 text-sm font-medium text-blue-700">
+                  {user.name || user.email || "User"}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="ml-2 text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <button
+                  className="text-sm bg-gradient-to-r from-blue-700 to-black text-white px-4 py-1.5 rounded shadow-lg hover:from-black hover:to-blue-700 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                  onClick={() => setShowLoginDropdown((v) => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={showLoginDropdown}
+                >
+                  Login
+                </button>
+                {/* Overlay for closing dropdown on outside click */}
+                {showLoginDropdown && (
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowLoginDropdown(false)}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                )}
+                <div
+                  className={`absolute right-0 mt-2 w-48 bg-white border border-blue-100 rounded-xl shadow-2xl z-50 transition-all duration-200 origin-top-right
+                    ${showLoginDropdown
+                      ? "opacity-100 scale-100 pointer-events-auto translate-y-0"
+                      : "opacity-0 scale-95 pointer-events-none -translate-y-2"
+                    }`}
+                  style={{ minWidth: "180px" }}
+                >
+                  <button
+                    onClick={() => {
+                      setShowAuthModal(true);
+                      setShowLoginDropdown(false);
+                    }}
+                    className="block w-full text-left px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-t-xl transition-colors duration-150"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FaUserCircle className="text-lg" />
+                      User Login
+                    </span>
+                  </button>
+                  <Link
+                    to="/admin/login"
+                    className="block px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium rounded-b-xl transition-colors duration-150"
+                    onClick={() => setShowLoginDropdown(false)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <FaUserCircle className="text-lg" />
+                      Admin Login
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
       </nav>
 
       {showAuthModal && (
-        <AuthModal onClose={() => setShowAuthModal(false)} setUser={setUser} />
+        <AuthModal onClose={() => setShowAuthModal(false)} />
       )}
     </>
   );

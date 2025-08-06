@@ -1,63 +1,53 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getLoggedInUser } from "../utils/authUtils";
+import { useAuth } from "../context/AuthContext";
+import { fetchWishlist, updateWishlist } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
 export default function Wishlist() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
 
-  // Helper to reload wishlist from storage
-  const reloadWishlist = () => {
-    const current = getLoggedInUser();
-    const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-    setWishlist(JSON.parse(localStorage.getItem(wishlistKey)) || []);
+
+  // Helper to reload wishlist from backend
+  const reloadWishlist = async () => {
+    try {
+      const data = await fetchWishlist();
+      setWishlist(data || []);
+    } catch {
+      setWishlist([]);
+    }
   };
 
   useEffect(() => {
-    const current = getLoggedInUser();
-    if (!current) {
+    if (!user) {
       setShowAuthModal(true);
       return;
     }
     reloadWishlist();
-
-    // Listen for cart/wishlist updates from other components
+    // Listen for wishlist updates from other components
     const handler = () => reloadWishlist();
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
-  }, []);
+  }, [user]);
 
-  const handleRemoveFromWishlist = (id) => {
-    const current = getLoggedInUser();
-    const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-    const updated = wishlist.filter((w) => w.id !== id);
+  const handleRemoveFromWishlist = async (id) => {
+    // Remove product by ID, update backend with array of IDs
+    const updated = wishlist.filter((w) => (w._id || w.id) !== id);
     setWishlist(updated);
-    localStorage.setItem(wishlistKey, JSON.stringify(updated));
+    try {
+      await updateWishlist(updated.map((p) => p._id || p.id));
+    } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
-  const handleAddToCart = (product) => {
-    const current = getLoggedInUser();
-    const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    if (!cart.some((c) => c.id === product.id)) {
-      const updated = [...cart, product];
-      localStorage.setItem(cartKey, JSON.stringify(updated));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    }
-  };
-
-  const handleRemoveFromCart = (product) => {
-    const current = getLoggedInUser();
-    const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const updated = cart.filter((c) => c.id !== product.id);
-    localStorage.setItem(cartKey, JSON.stringify(updated));
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
-  };
+  // Cart handled by backend; implement if needed
+  // (Optional: implement add to cart from wishlist if needed)
+  const handleAddToCart = () => {};
+  const handleRemoveFromCart = () => {};
 
   // Update to send all wishlist products to OrderNow
   const handleGoToOrderNow = () => {
@@ -84,29 +74,17 @@ export default function Wishlist() {
         <p className="text-gray-500 text-center">Your wishlist is empty.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
-          {wishlist.map((product) => {
-            const current = getLoggedInUser();
-            const isLoggedIn = !!(current && current.email);
-            const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-            const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-            const inCart = isLoggedIn ? cart.some((c) => c.id === product.id) : false;
-            const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-            const wishlistArr = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-            const inWishlist = isLoggedIn ? wishlistArr.some((w) => w.id === product.id) : false;
-            return (
-              <ProductCard
-                key={product.id}
-                product={product}
-                inWishlist={inWishlist}
-                inCart={inCart}
-                onRemoveFromWishlist={isLoggedIn ? () => handleRemoveFromWishlist(product.id) : undefined}
-                onAddToCart={isLoggedIn ? () => handleAddToCart(product) : undefined}
-                onRemoveFromCart={isLoggedIn ? () => handleRemoveFromCart(product) : undefined}
-                showActions={isLoggedIn}
-                pageType="wishlist"
-              />
-            );
-          })}
+          {wishlist.map((product) => (
+            <ProductCard
+              key={product.id || product._id}
+              product={product}
+              inWishlist={true}
+              inCart={false}
+              onRemoveFromWishlist={() => handleRemoveFromWishlist(product.id || product._id)}
+              showActions={true}
+              pageType="wishlist"
+            />
+          ))}
         </div>
       )}
       {wishlist.length > 0 && (

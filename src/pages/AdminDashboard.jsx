@@ -20,11 +20,19 @@ export default function AdminDashboard() {
   const productsPerPage = 5;
 
   useEffect(() => {
-    // Always read latest user info from adminUserUpdates
-    const updatedUsers = JSON.parse(localStorage.getItem("adminUserUpdates")) || JSON.parse(localStorage.getItem("users")) || [];
-    setUsers(updatedUsers);
-    const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
-    setOrders(storedOrders);
+    async function fetchData() {
+      try {
+        const usersRes = await fetch('/api/users', { credentials: 'include' });
+        const usersData = await usersRes.json();
+        setUsers(usersData);
+      } catch {
+        setUsers([]);
+      }
+      // You may want to fetch orders from backend as well, but keeping localStorage for now
+      const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
+      setOrders(storedOrders);
+    }
+    fetchData();
   }, []);
 
   const handleStatusChange = (orderId, newStatus) => {
@@ -281,7 +289,12 @@ export default function AdminDashboard() {
                   paginated.map((p) => (
                     <li key={p.id} className="bg-gray-50 p-4 rounded flex justify-between items-center">
                       <div>
-                        <img src={p.image} alt={p.name} className="w-16 h-16 object-contain mb-2" />
+                        <img 
+                          src={p.image || require('../assets/default-avatar.png')}
+                          alt={p.name}
+                          className="w-16 h-16 object-contain mb-2"
+                          onError={e => { e.target.onerror = null; e.target.src = require('../assets/default-avatar.png'); }}
+                        />
                         <div className="font-semibold">{p.name}</div>
                         <div className="text-green-700">₹{p.price}</div>
                         <div className="text-xs text-gray-500">Stock: {p.stock || "N/A"}</div>

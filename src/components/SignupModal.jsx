@@ -1,5 +1,6 @@
 // filepath: [SignupModal.jsx](http://_vscodecontentref_/1)
 import React, { useState } from 'react';
+import { signup as apiSignup } from '../utils/api';
 import { initializeApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
@@ -87,7 +88,7 @@ const SignupModal = ({ onClose }) => {
   };
 
   // Signup logic
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setMsg('');
     setMsgType('error');
     const errors = {};
@@ -103,14 +104,6 @@ const SignupModal = ({ onClose }) => {
     if (!validateMobile(form.mobile)) {
       errors.mobile = 'Enter a valid mobile number (8-15 digits).';
     }
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    if (form.email && users.find(u => u.email === form.email)) {
-      errors.email = 'User already registered with this email!';
-    }
-    if (form.mobile && users.find(u => u.countryCode === form.countryCode && u.mobile === form.mobile)) {
-      errors.mobile = 'This mobile number is already registered with another account!';
-    }
-    // Only show OTP error if all other fields are valid
     if (Object.keys(errors).length === 0 && !otpVerified) {
       errors.otp = 'Please verify your mobile number by entering the OTP sent to your phone.';
     }
@@ -118,14 +111,22 @@ const SignupModal = ({ onClose }) => {
     if (Object.keys(errors).length > 0) {
       return;
     }
-    // Save mobile as phone for profile compatibility
-    const userObj = { ...form, phone: form.mobile };
-    users.push(userObj);
-    localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('adminUserUpdates', JSON.stringify(users));
-    setMsgType('info');
-    setMsg('Signup successful!');
-    setFieldErrors({});
+    try {
+      const signupData = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        mobile: form.mobile,
+        countryCode: form.countryCode
+      };
+      await apiSignup(signupData);
+      setMsgType('info');
+      setMsg('Signup successful! You can now log in.');
+      setFieldErrors({});
+    } catch (err) {
+      setMsgType('error');
+      setMsg(err.response?.data?.message || 'Signup failed.');
+    }
   };
 
   return (

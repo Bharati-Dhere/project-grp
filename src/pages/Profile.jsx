@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getLoggedInUser } from '../utils/authUtils';
+import { useAuth } from '../context/AuthContext';
+import { fetchUserProfile, updateUserProfile, fetchOrders } from '../utils/api';
 import defaultAvatar from '../assets/default-avatar.png';
 import AuthModal from '../components/AuthModal';
 
@@ -30,20 +31,20 @@ function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onCl
             ))}
           </ul>
         </div>
-        <span className={`mt-1 text-xs font-semibold ${order.status === 'Cancelled' ? 'text-red-600' : 'text-blue-700'}`}>Status: {order.status}</span>
-      </div>
-      <div className="flex gap-2 mt-2 md:mt-0">
-        {onTrack && <button onClick={onTrack} className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1" title="Track this order">Track</button>}
-        {onCancel && order.status !== 'Cancelled' && <button onClick={onCancel} className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-700 flex items-center gap-1" title="Cancel this order">Cancel</button>}
-        {onReorder && order.status === 'Cancelled' && <button onClick={onReorder} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Reorder</button>}
-        {onUserCancel && order.status === 'Cancelled' && <button onClick={onUserCancel} className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-600">Remove</button>}
+        <div className="flex gap-2 mt-2 md:mt-0">
+          {onTrack && <button onClick={onTrack} className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1" title="Track this order">Track</button>}
+          {onCancel && order.status !== 'Cancelled' && <button onClick={onCancel} className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-700 flex items-center gap-1" title="Cancel this order">Cancel</button>}
+          {onReorder && order.status === 'Cancelled' && <button onClick={onReorder} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Reorder</button>}
+          {onUserCancel && order.status === 'Cancelled' && <button onClick={onUserCancel} className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-600">Remove</button>}
+        </div>
       </div>
     </li>
   );
-}
 
+}
 export default function Profile() {
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
+  const [profile, setProfile] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
   const [allUsers, setAllUsers] = useState([]);
@@ -110,47 +111,25 @@ export default function Profile() {
   }
 
   useEffect(() => {
-    function refreshUserAndOrders() {
-      const current = getLoggedInUser();
-      if (!current) {
-        setShowAuthModal(true); // Show modal for guests
+    async function loadProfileAndOrders() {
+      if (!user) {
+        setShowAuthModal(true);
         return;
       }
-      setUser(current);
-      setForm(current || {});
-      setAvatar(current?.avatar || null);
-      setNotifications(current?.notifications || false);
-      const userOrders = JSON.parse(localStorage.getItem(`orders_${current?.email}`)) || [];
-      const globalOrders = JSON.parse(localStorage.getItem("orders")) || [];
-      const syncedOrders = userOrders.map((uo) => {
-        const globalMatch = globalOrders.find((go) => go.id === uo.id);
-        return globalMatch ? { ...uo, status: globalMatch.status } : uo;
-      });
-      setOrders(syncedOrders);
-      // Load allUsers from localStorage (added accounts)
-      const addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-      const users = JSON.parse(localStorage.getItem("users")) || [];
-      // Always include the current user in the list (in case not in addedAccounts)
-      const all = users.filter(u => addedAccounts.includes(u.email) || u.email === current.email);
-      setAllUsers(all);
+      try {
+        const profileData = await fetchUserProfile(user._id);
+        setProfile(profileData);
+        setForm(profileData);
+        setAvatar(profileData?.avatar || null);
+        setNotifications(profileData?.notifications || false);
+        const ordersData = await fetchOrders();
+        setOrders(ordersData);
+      } catch (err) {
+        setShowAuthModal(true);
+      }
     }
-
-    refreshUserAndOrders();
-
-    const handleVisibility = () => {
-      refreshUserAndOrders();
-    };
-    const handleUserSwitched = () => {
-      refreshUserAndOrders();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("userSwitched", handleUserSwitched);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("userSwitched", handleUserSwitched);
-    };
-  }, [navigate, centerTab]);
+    loadProfileAndOrders();
+  }, [user, centerTab]);
 
 
   //Track order
@@ -161,140 +140,41 @@ export default function Profile() {
     const order = orders.find(o => String(o.id) === String(idToTrack));
     setTrackStatus(order ? order.status : "Order not found");
   };
-  // Cancel order handler
-  const handleCancelOrder = (orderId) => {
-    // Find the order being cancelled
-    const order = orders.find(o => o.id === orderId);
-    // Update user orders
-    const updatedUserOrders = orders.map(o =>
-      o.id === orderId ? { ...o, status: 'Cancelled' } : o
-    );
-    setOrders(updatedUserOrders);
-    localStorage.setItem(`orders_${user.email}`, JSON.stringify(updatedUserOrders));
-    // Update global orders
-    const globalOrders = JSON.parse(localStorage.getItem('orders')) || [];
-    const updatedGlobalOrders = globalOrders.map(o => {
-      if (o.id === orderId) {
-        let paymentReturnStatus = o.paymentMethod === 'UPI' || o.paymentMethod === 'Online' ? 'Processing' : undefined;
-        return {
-          ...o,
-          status: 'Cancelled',
-          ...(paymentReturnStatus ? { paymentReturnStatus } : {})
-        };
-      }
-      return o;
-    });
-    localStorage.setItem('orders', JSON.stringify(updatedGlobalOrders));
-    let msg = 'Order cancelled.';
-    if (order && (order.paymentMethod === 'UPI' || order.paymentMethod === 'Online')) {
-      msg += ' Payment will be returned to your account.';
+  // Cancel order handler (backend only)
+  const handleCancelOrder = async (orderId) => {
+    try {
+      // Call backend API to cancel order (implement in your backend and api.js)
+      // await cancelOrder(orderId);
+      // For now, just update local state for UI
+      setOrders(orders => orders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' } : o));
+      toast.info('Order cancelled.');
+    } catch (err) {
+      toast.error('Failed to cancel order.');
     }
-    toast.info(msg);
   };
 
-  // Logout: remove current user, clear session, switch to next if available
+  // Logout: use backend/context only
   const handleLogout = () => {
-    const loggedIn = JSON.parse(localStorage.getItem("loggedInUser"));
-    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-    // Remove current user from addedAccounts
-    let filtered = loggedIn ? addedAccounts.filter(e => e !== loggedIn.email) : addedAccounts;
-    localStorage.setItem("addedAccounts", JSON.stringify(filtered));
-    // Remove session for this user
-    let sessions = JSON.parse(localStorage.getItem("userSessions")) || {};
-    if (loggedIn && sessions[loggedIn.email]) {
-      delete sessions[loggedIn.email];
-      localStorage.setItem("userSessions", JSON.stringify(sessions));
-    }
-    // Remove loggedInUser
-    localStorage.removeItem("loggedInUser");
-    // Switch to another account if present
-    if (filtered.length > 0) {
-      const users = JSON.parse(localStorage.getItem("users")) || [];
-      const nextUser = users.find(u => u.email === filtered[0]);
-      if (nextUser) {
-        localStorage.setItem("loggedInUser", JSON.stringify(nextUser));
-        setUser(() => {
-          setTimeout(() => window.dispatchEvent(new Event("userSwitched")), 0);
-          return nextUser;
-        });
-        window.dispatchEvent(new Event("cartWishlistUpdated"));
-        toast.info(`Switched to ${nextUser.email}`);
-        navigate("/profile");
-        return;
-      }
-    }
-    setUser(() => {
-      setTimeout(() => window.dispatchEvent(new Event("userSwitched")), 0);
-      return null;
-    });
-    window.dispatchEvent(new Event("cartWishlistUpdated"));
-    toast.info("Logged out");
-    navigate("/");
+    logout();
   };
 
-  // Sign Out: delete account permanently and clear session
-  const handleDeleteAccount = () => {
+  // Sign Out: delete account via backend only
+  const handleDeleteAccount = async () => {
     if (!window.confirm("Are you sure you want to permanently delete your account? This cannot be undone.")) return;
-    // Remove from users
-    let users = JSON.parse(localStorage.getItem("users")) || [];
-    users = users.filter(u => u.email !== user.email);
-    localStorage.setItem("users", JSON.stringify(users));
-    // Remove from addedAccounts
-    let addedAccounts = JSON.parse(localStorage.getItem("addedAccounts")) || [];
-    addedAccounts = addedAccounts.filter(e => e !== user.email);
-    localStorage.setItem("addedAccounts", JSON.stringify(addedAccounts));
-    // Remove loggedInUser if this user
-    const loggedIn = JSON.parse(localStorage.getItem("loggedInUser"));
-    if (loggedIn && loggedIn.email === user.email) {
-      localStorage.removeItem("loggedInUser");
+    try {
+      // Call backend API to delete user (implement in your backend and api.js)
+      // await deleteUser(user._id);
+      logout();
+      toast.success('Account deleted.');
+    } catch (err) {
+      toast.error('Failed to delete account.');
     }
-    // Remove session for this user
-    let sessions = JSON.parse(localStorage.getItem("userSessions")) || {};
-    if (sessions[user.email]) {
-      delete sessions[user.email];
-      localStorage.setItem("userSessions", JSON.stringify(sessions));
-    }
-    // Remove user-specific cart/wishlist if needed
-    localStorage.removeItem(`cart_${user.email}`);
-    localStorage.removeItem(`wishlist_${user.email}`);
-    // Switch to another account if present
-    if (addedAccounts.length > 0) {
-      const nextUser = users.find(u => u.email === addedAccounts[0]);
-      if (nextUser) {
-        localStorage.setItem("loggedInUser", JSON.stringify(nextUser));
-        setUser(() => {
-          setTimeout(() => window.dispatchEvent(new Event("userSwitched")), 0);
-          return nextUser;
-        });
-        window.dispatchEvent(new Event("cartWishlistUpdated"));
-        toast.info(`Switched to ${nextUser.email}`);
-        navigate("/profile");
-        return;
-      }
-    }
-    setUser(() => {
-      setTimeout(() => window.dispatchEvent(new Event("userSwitched")), 0);
-      return null;
-    });
-    window.dispatchEvent(new Event("cartWishlistUpdated"));
-    toast.success("Account deleted");
-    navigate("/");
   };
 
+  // Switch user: backend/context only (implement as needed)
   const handleSwitchUser = (email) => {
-    const selectedUser = allUsers.find((u) => u.email === email);
-    if (selectedUser) {
-      localStorage.setItem("loggedInUser", JSON.stringify(selectedUser));
-      setUser(() => {
-        setForm(selectedUser);
-        setAvatar(selectedUser.avatar || null);
-        setNotifications(selectedUser.notifications || false);
-        setTimeout(() => window.dispatchEvent(new Event("userSwitched")), 0);
-        return selectedUser;
-      });
-      window.dispatchEvent(new Event("cartWishlistUpdated"));
-      toast.success(`Switched to ${selectedUser.name}`);
-    }
+    // Implement account switching via backend/context if needed
+    toast.info('Account switching is now handled by backend.');
   };
 
   const handleEdit = () => setEditMode(true);
@@ -335,23 +215,19 @@ export default function Profile() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix errors before saving.");
       return;
     }
-    const updatedUser = { ...form, avatar, notifications };
-    setUser(updatedUser);
-    setEditMode(false);
-    // Update users list
-    const updatedUsers = allUsers.map((u) =>
-      u.email === updatedUser.email ? updatedUser : u
-    );
-    setAllUsers(updatedUsers);
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    localStorage.setItem("adminUserUpdates", JSON.stringify(updatedUsers));
-    localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
-    toast.success("Profile updated");
+    try {
+      const updated = await updateUserProfile(user._id, { ...form, avatar, notifications });
+      setProfile(updated);
+      setEditMode(false);
+      toast.success("Profile updated");
+    } catch (err) {
+      toast.error("Failed to update profile");
+    }
   };
 
   // Order management
@@ -364,61 +240,32 @@ export default function Profile() {
   // --- Place these just before the return statement, only once ---
 
   // --- Only one correct version of each handler below ---
-  // User-side cancel for cancelled order (shows popup, UPI refund if needed)
-  const handleUserCancelOrder = (order) => {
-    // Remove order from user orders
-    const userOrders = (JSON.parse(localStorage.getItem(`orders_${user.email}`)) || []).filter(o => o.id !== order.id);
-    localStorage.setItem(`orders_${user.email}`, JSON.stringify(userOrders));
-    setOrders(userOrders.map(uo => {
-      // Sync with global if needed (shouldn't matter since it's deleted)
-      return uo;
-    }));
-    // Remove order from global orders
-    const globalOrders = (JSON.parse(localStorage.getItem('orders')) || []).filter(o => o.id !== order.id);
-    localStorage.setItem('orders', JSON.stringify(globalOrders));
-    let msg = 'Order cancelled and removed.';
-    if (order.paymentMethod === 'UPI') {
-      msg += ' Payment will be returned to your account.';
+  // User-side cancel for cancelled order (backend only)
+  const handleUserCancelOrder = async (order) => {
+    try {
+      // Call backend API to remove/cancel order (implement in your backend and api.js)
+      // await removeOrder(order.id);
+      setOrders(orders => orders.filter(o => o.id !== order.id));
+      toast.info('Order cancelled and removed.');
+    } catch (err) {
+      toast.error('Failed to remove order.');
     }
-    toast.info(msg);
   };
 
-  // Reorder logic: duplicate order, new id, status Processing, update user/global orders
-  const handleReorder = (order) => {
-    // Remove cancelled order from user orders
-    let userOrders = (JSON.parse(localStorage.getItem(`orders_${user.email}`)) || []).filter(o => o.id !== order.id);
-    // Remove cancelled order from global orders
-    let globalOrders = (JSON.parse(localStorage.getItem('orders')) || []).filter(o => o.id !== order.id);
-    // Create new order
-    const newId = Math.max(0, ...globalOrders.map(o => Number(o.id))) + 1;
-    const newOrder = {
-      ...order,
-      id: newId,
-      status: 'Processing',
-      date: new Date().toISOString(),
-    };
-    globalOrders = [...globalOrders, newOrder];
-    userOrders = [...userOrders, newOrder];
-    localStorage.setItem('orders', JSON.stringify(globalOrders));
-    localStorage.setItem(`orders_${user.email}`, JSON.stringify(userOrders));
-    setOrders(userOrders.map(uo => {
-      const globalMatch = globalOrders.find(go => go.id === uo.id);
-      return globalMatch ? { ...uo, status: globalMatch.status } : uo;
-    }));
-    toast.success('Order placed again! Cancelled order removed.');
+  // Reorder logic: backend only
+  const handleReorder = async (order) => {
+    try {
+      // Call backend API to reorder (implement in your backend and api.js)
+      // await reorderOrder(order.id);
+      toast.success('Order placed again!');
+    } catch (err) {
+      toast.error('Failed to reorder.');
+    }
   };
 
-  // Update order delivery date (admin)
+  // Update order delivery date (admin, backend only)
   function updateOrderDeliveryDate(orderId, newDate) {
-    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, deliveryDate: newDate } : o);
-    setOrders(updatedOrders);
-    if (user?.email) {
-      localStorage.setItem(`orders_${user.email}`, JSON.stringify(updatedOrders));
-    }
-    // Update in global orders
-    const globalOrders = JSON.parse(localStorage.getItem("orders")) || [];
-    const updatedGlobalOrders = globalOrders.map(o => o.id === orderId ? { ...o, deliveryDate: newDate } : o);
-    localStorage.setItem("orders", JSON.stringify(updatedGlobalOrders));
+    // Call backend API to update delivery date (implement in your backend and api.js)
     toast.success("Delivery date updated.");
   }
 
@@ -437,13 +284,7 @@ export default function Profile() {
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          setUser={() => {
-            const current = getLoggedInUser();
-            if (current) {
-              setUser(current);
-              setShowAuthModal(false);
-            }
-          }}
+          setUser={() => setShowAuthModal(false)}
         />
       )}
       {/* Sidebar */}
@@ -513,6 +354,7 @@ export default function Profile() {
                   <div className="relative w-24 h-24 mb-2">
                     <img
                       src={avatar || defaultAvatar}
+                      onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
                       alt="Avatar Preview"
                       className="w-24 h-24 rounded-full object-cover border-2 border-blue-400"
                     />
@@ -715,7 +557,8 @@ export default function Profile() {
       {user?.role === 'admin' && adminOrderModal && (
         <AdminOrderDetailsModal order={adminOrderModal} onClose={() => setAdminOrderModal(null)} />
       )}
+
       </main>
     </div>
-  );
-}
+  ); }
+

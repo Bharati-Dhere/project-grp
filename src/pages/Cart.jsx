@@ -1,63 +1,55 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getLoggedInUser } from "../utils/authUtils";
+import { useAuth } from "../context/AuthContext";
+import { fetchCart, updateCart } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
 export default function Cart() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Helper to reload cart from storage
-  const reloadCart = () => {
-    const current = getLoggedInUser();
-    const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-    setCart(JSON.parse(localStorage.getItem(cartKey)) || []);
+
+  // Helper to reload cart from backend
+  const reloadCart = async () => {
+    try {
+      const data = await fetchCart();
+      setCart(data || []);
+    } catch {
+      setCart([]);
+    }
   };
 
   useEffect(() => {
-    const current = getLoggedInUser();
-    if (!current) {
+    if (!user) {
       setShowAuthModal(true);
       return;
     }
     reloadCart();
-
-    // Listen for cart/wishlist updates from other components
+    // Listen for cart updates from other components
     const handler = () => reloadCart();
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
-  }, []);
+  }, [user]);
 
-  const handleRemoveFromCart = (id) => {
-    const current = getLoggedInUser();
-    const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-    const updated = cart.filter((c) => c.id !== id);
+  const handleRemoveFromCart = async (id) => {
+    // Remove product by ID, update backend with array of IDs (as objects with product+quantity)
+    const updated = cart.filter((c) => (c._id || c.id) !== id);
     setCart(updated);
-    localStorage.setItem(cartKey, JSON.stringify(updated));
+    try {
+      // Only send array of { product: id, quantity } to backend
+      await updateCart(updated.map((item) => ({ product: item._id || item.id, quantity: item.quantity || 1 })));
+    } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
-  const handleAddToWishlist = (product) => {
-    const current = getLoggedInUser();
-    const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    if (!wishlist.some((w) => w.id === product.id)) {
-      const updated = [...wishlist, product];
-      localStorage.setItem(wishlistKey, JSON.stringify(updated));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    }
-  };
+  // Wishlist handled by backend; implement if needed
+  const handleAddToWishlist = () => {};
 
-  const handleRemoveFromWishlist = (product) => {
-    const current = getLoggedInUser();
-    const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    const updated = wishlist.filter((w) => w.id !== product.id);
-    localStorage.setItem(wishlistKey, JSON.stringify(updated));
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
-  };
+  // Wishlist handled by backend; implement if needed
+  const handleRemoveFromWishlist = () => {};
 
   // Update to send all cart products to OrderNow
   const handleGoToOrderNow = () => {
@@ -88,27 +80,17 @@ export default function Cart() {
       ) : (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
-          {cart.map((product) => {
-            const current = getLoggedInUser();
-            const isLoggedIn = !!(current && current.email);
-            const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-            const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-            const inWishlist = isLoggedIn ? wishlist.some((w) => w.id === product.id) : false;
-            const inCart = isLoggedIn ? true : false;
-            return (
-              <ProductCard
-                key={product.id}
-                product={product}
-                inCart={inCart}
-                inWishlist={inWishlist}
-                onRemoveFromCart={() => handleRemoveFromCart(product.id)}
-                onAddToWishlist={isLoggedIn ? () => handleAddToWishlist(product) : undefined}
-                onRemoveFromWishlist={isLoggedIn ? () => handleRemoveFromWishlist(product) : undefined}
-                showActions={true}
-                pageType="cart"
-              />
-            );
-          })}
+          {cart.map((product) => (
+            <ProductCard
+              key={product.id || product._id}
+              product={product}
+              inCart={true}
+              inWishlist={false}
+              onRemoveFromCart={() => handleRemoveFromCart(product.id || product._id)}
+              showActions={true}
+              pageType="cart"
+            />
+          ))}
         </div>
           {/* Total Price & Place Order Button */}
           <div className="flex flex-col md:flex-row items-center justify-between mt-8 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">

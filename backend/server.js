@@ -1,16 +1,35 @@
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const adminRoutes = require('./routes/admin');
+
 const productRoutes = require('./routes/products');
 const accessoryRoutes = require('./routes/accessories');
+const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
+const cartRoutes = require('./routes/cart');
+const wishlistRoutes = require('./routes/wishlist');
+const ordersRoutes = require('./routes/orders');
 
+
+const cookieParser = require('cookie-parser');
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
+
 
 app.use('/api/products', productRoutes);
 app.use('/api/accessories', accessoryRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/orders', ordersRoutes);
+
+app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 
