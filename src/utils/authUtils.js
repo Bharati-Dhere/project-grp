@@ -23,7 +23,12 @@ export const getUsers = () => {
 };
 
 export const getLoggedInUser = () => {
-  return JSON.parse(localStorage.getItem("loggedInUser"));
+  try {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    return user || null;
+  } catch {
+    return null;
+  }
 };
 
 export const setLoggedInUser = (user) => {

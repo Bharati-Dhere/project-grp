@@ -11,6 +11,7 @@ export default function AdminCustomers() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Use relative API paths for proxy setup
         const usersRes = await axios.get("/api/users", { withCredentials: true });
         setUsers(usersRes.data);
         const ordersRes = await axios.get("/api/admin/orders", { withCredentials: true });
@@ -18,6 +19,8 @@ export default function AdminCustomers() {
       } catch (err) {
         setUsers([]);
         setOrders([]);
+        // Debug: show error in UI
+        window.alert("Error fetching users: " + (err.response?.data?.message || err.message));
       }
     }
     fetchData();
@@ -33,15 +36,19 @@ export default function AdminCustomers() {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Customer Management</h1>
       <ul className="space-y-2 mb-6">
+        {/* Debug: show raw user data */}
         {users.length === 0 ? (
           <li className="text-gray-500">No registered users found.</li>
         ) : (
-          users.map((u) => (
-            <li key={u._id} className="bg-gray-50 p-4 rounded flex justify-between items-center cursor-pointer hover:bg-blue-50" onClick={() => setSelectedUser(u)}>
-              <span className="font-semibold text-blue-800">{u.name}</span>
-              <span className="text-sm text-gray-500">{u.email}</span>
-            </li>
-          ))
+          <>
+            <li className="text-xs text-gray-400">Raw users: <pre>{JSON.stringify(users, null, 2)}</pre></li>
+            {users.map((u) => (
+              <li key={u._id} className="bg-gray-50 p-4 rounded flex justify-between items-center cursor-pointer hover:bg-blue-50" onClick={() => setSelectedUser(u)}>
+                <span className="font-semibold text-blue-800">{u.name}</span>
+                <span className="text-sm text-gray-500">{u.email}</span>
+              </li>
+            ))}
+          </>
         )}
       </ul>
       {selectedUser && (

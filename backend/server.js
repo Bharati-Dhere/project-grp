@@ -11,6 +11,8 @@ const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const cartRoutes = require('./routes/cart');
 const wishlistRoutes = require('./routes/wishlist');
+
+const otpRoutes = require('./routes/otp');
 const ordersRoutes = require('./routes/orders');
 
 
@@ -21,6 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 
+
 app.use('/api/products', productRoutes);
 app.use('/api/accessories', accessoryRoutes);
 app.use('/api/auth', authRoutes);
@@ -28,6 +31,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/otp', otpRoutes);
 
 app.use('/api/admin', adminRoutes);
 

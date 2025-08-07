@@ -32,9 +32,13 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Get all users (for account switching, admin only)
+// Get all users (for admin dashboard/customer page)
 router.get('/', auth, async (req, res) => {
+  const adminUser = await User.findById(req.userId);
+  if (!adminUser || adminUser.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
   const users = await User.find().select('-password');
-  console.log('Admin fetch users:', users);
   res.json(users);
 });
 

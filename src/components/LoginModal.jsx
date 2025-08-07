@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { login as apiLogin } from '../utils/api';
 
 const LoginModal = ({ onClose }) => {
   const [email, setEmail] = useState('');
@@ -17,46 +18,59 @@ const LoginModal = ({ onClose }) => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const matched = users.find(u => u.email === email && u.password === password);
-    if (!matched) {
-      setError("Invalid email or password!");
-    } else {
-      login(matched);
+  const handleLogin = async () => {
+    setError('');
+    try {
+      const user = await apiLogin({ email, password });
+      login(user.user);
       onClose();
       navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed.');
     }
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
+    setError('');
     if (!mobile || mobile.length < 8) {
       setError('Enter a valid mobile number.');
       return;
     }
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const exists = users.find(u => u.countryCode === countryCode && u.mobile === mobile);
-    if (!exists) {
-      setError('Mobile number not registered.');
-      return;
+    try {
+      const res = await fetch('/api/otp/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+      setGeneratedOtp(data.otp); // For demo, show OTP
+      setOtpSent(true);
+      setError(`OTP sent to ${mobile}. (Demo OTP: ${data.otp})`);
+    } catch (err) {
+      setError(err.message);
     }
-    const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
-    setGeneratedOtp(otp);
-    setOtpSent(true);
-    setError(`OTP sent to ${countryCode} ${mobile}. (Demo OTP: ${otp})`);
   };
 
-  const handleVerifyOtp = () => {
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    // If multiple users with same mobile, pick the first one (or you can show a list to pick)
-    const matched = users.find(u => u.countryCode === countryCode && u.mobile === mobile);
-    if (otp === generatedOtp && matched) {
-      // Always login as the matched user (with their email)
-      login(matched);
+  const handleVerifyOtp = async () => {
+    setError('');
+    if (!otp || otp.length !== 6) {
+      setError('Enter the 6-digit OTP.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/otp/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile, otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+      login(data.user);
       onClose();
       navigate('/');
-    } else {
-      setError('Invalid OTP.');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -75,6 +89,7 @@ const LoginModal = ({ onClose }) => {
           </>
         ) : (
           <>
+            {/* ...existing code for OTP login... */}
             <div className="flex gap-2 mb-2">
               <select className="input w-24" value={countryCode} onChange={e => setCountryCode(e.target.value)}>
                 <option value="+91">+91 (India)</option>

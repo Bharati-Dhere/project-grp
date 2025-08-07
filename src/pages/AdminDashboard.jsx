@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         <div className="bg-white shadow p-4 rounded">
           <h2 className="text-lg font-semibold mb-4 text-gray-700">Registered Users</h2>
           <ul className="space-y-2">
-            {users.map((user) => (
+            {(Array.isArray(users) ? users : []).map((user) => (
               <li
                 key={user.email}
                 className="p-3 bg-gray-50 rounded hover:bg-blue-100 cursor-pointer shadow-sm transition-all duration-300 ease-in-out hover:scale-[1.02] flex justify-between items-center"
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => {
-                    const updatedUsers = users.filter(u => u.email !== user.email);
+                    const updatedUsers = (Array.isArray(users) ? users : []).filter(u => u.email !== user.email);
                     localStorage.setItem("users", JSON.stringify(updatedUsers));
                     localStorage.setItem("adminUserUpdates", JSON.stringify(updatedUsers));
                     setUsers(updatedUsers);
