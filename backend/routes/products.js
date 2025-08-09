@@ -2,9 +2,22 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
+
 // Get all products
 router.get('/', async (req, res) => {
   const products = await Product.find();
+  res.json(products);
+});
+
+// Get latest offer products (sorted by updatedAt desc, isOffer true)
+router.get('/offers/latest', async (req, res) => {
+  const products = await Product.find({ isOffer: true }).sort({ updatedAt: -1 }).limit(10);
+  res.json(products);
+});
+
+// Get latest best seller products (sorted by updatedAt desc, isBestSeller true)
+router.get('/bestsellers/latest', async (req, res) => {
+  const products = await Product.find({ isBestSeller: true }).sort({ updatedAt: -1 }).limit(10);
   res.json(products);
 });
 

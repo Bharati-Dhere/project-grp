@@ -28,19 +28,30 @@ export default function AdminDashboard() {
       } catch {
         setUsers([]);
       }
-      // You may want to fetch orders from backend as well, but keeping localStorage for now
-      const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
-      setOrders(storedOrders);
+      // Fetch orders from backend
+      try {
+        const ordersRes = await fetch('/api/admin/orders', { credentials: 'include' });
+        const ordersData = await ordersRes.json();
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
+      } catch {
+        setOrders([]);
+      }
     }
     fetchData();
   }, []);
 
-  const handleStatusChange = (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus) => {
     const updatedOrders = orders.map((o) =>
       o.id === orderId ? { ...o, status: newStatus } : o
     );
     setOrders(updatedOrders);
-    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    // Update order status in backend
+    await fetch(`/api/admin/orders/${orderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: newStatus })
+    });
   };
 
   useEffect(() => {
@@ -66,8 +77,9 @@ export default function AdminDashboard() {
   // Dashboard analytics summary
   const totalUsers = users.length;
   const totalOrders = orders.filter(o => o.status !== 'Cancelled').length;
-  const totalProducts = (JSON.parse(localStorage.getItem("products")) || []).length;
-  const totalFeedback = (JSON.parse(localStorage.getItem("adminReviews")) || []).length + (JSON.parse(localStorage.getItem("contactForms")) || []).length;
+  // Fetch products and feedback from backend if needed
+  const totalProducts = 0; // Replace with backend count if available
+  const totalFeedback = 0; // Replace with backend count if available
 
   return (
     <main className="flex-1 p-6 transition-all duration-500 ease-in-out">
@@ -111,11 +123,13 @@ export default function AdminDashboard() {
                   <div className="text-xs text-gray-500">Gender: {user.gender}</div>
                 </div>
                 <button
-                  onClick={() => {
-                    const updatedUsers = (Array.isArray(users) ? users : []).filter(u => u.email !== user.email);
-                    localStorage.setItem("users", JSON.stringify(updatedUsers));
-                    localStorage.setItem("adminUserUpdates", JSON.stringify(updatedUsers));
-                    setUsers(updatedUsers);
+                  onClick={async () => {
+                    // Delete user from backend
+                    await fetch(`/api/admin/users/${user._id}`, {
+                      method: 'DELETE',
+                      credentials: 'include'
+                    });
+                    setUsers((Array.isArray(users) ? users : []).filter(u => u._id !== user._id));
                   }}
                   className="bg-red-500 text-white px-2 py-1 rounded ml-2"
                 >Delete</button>

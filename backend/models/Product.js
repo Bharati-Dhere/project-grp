@@ -15,6 +15,6 @@ const productSchema = new mongoose.Schema({
   isBestSeller: Boolean,
   badge: String,
   description: String
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

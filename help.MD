@@ -24,3 +24,11 @@ git push origin feature/add-product-form    --This uploads your local branch to 
 
 #last 
 ask your team leader to review and merge it into the main branch.
+
+
+
+
+D:\clone\project-grp>node backend/scripts/set_admin_password.js <admin_email> <new_password>
+( dbharati5162@gmail.com admin@A123)
+
+D:\clone\project-grp\backend>node scripts/make_admin.js dbharati5162@gmail.com

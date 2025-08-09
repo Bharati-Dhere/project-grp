@@ -6,14 +6,26 @@ export const ReviewProvider = ({ children }) => {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('reviews');
-    if (stored) setReviews(JSON.parse(stored));
+    // Fetch reviews from backend
+    fetch('/api/reviews', { credentials: 'include' })
+      .then(res => res.json())
+      .then(setReviews)
+      .catch(() => setReviews([]));
   }, []);
 
-  const addReview = (review) => {
-    const updated = [review, ...reviews];
-    setReviews(updated);
-    localStorage.setItem('reviews', JSON.stringify(updated));
+  const addReview = async (review) => {
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(review)
+      });
+      const newReview = await res.json();
+      setReviews([newReview, ...reviews]);
+    } catch {
+      // handle error
+    }
   };
 
   return (

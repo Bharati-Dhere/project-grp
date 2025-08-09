@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import translations from "../utils/translations";
-import LoginModal from "./LoginModal";
+// import LoginModal from "./LoginModal";
 
 export default function Footer() {
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  // const [showLoginModal, setShowLoginModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const languageOptions = [
     { value: "en", label: "English" },
@@ -16,9 +16,9 @@ export default function Footer() {
 
   return (
     <>
-      {showLoginModal && (
+      {/* {showLoginModal && (
         <LoginModal onClose={() => setShowLoginModal(false)} />
-      )}
+      )} */}
       <footer className="bg-gray-900 text-white py-10 mt-10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-sm text-gray-300">
           {/* Brand Info + Help Line */}

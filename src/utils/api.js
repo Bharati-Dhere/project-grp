@@ -1,7 +1,19 @@
-// src/utils/api.js
+
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000/api';
+
+// Fetch latest best sellers
+export const fetchLatestBestSellers = async () => {
+  const res = await axios.get(`${API_BASE}/products/bestsellers/latest`);
+  return res.data;
+};
+
+// Fetch latest offers
+export const fetchLatestOffers = async () => {
+  const res = await axios.get(`${API_BASE}/products/offers/latest`);
+  return res.data;
+};
 
 export const fetchProducts = async () => {
   const res = await axios.get(`${API_BASE}/products`);

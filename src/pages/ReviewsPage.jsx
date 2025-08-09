@@ -8,7 +8,8 @@ const ReviewPage = () => {
   const [filter, setFilter] = useState('newest');
 
   // ✅ Only include user-added reviews (with numeric id)
-  const userReviews = reviews.filter((r) => typeof r.id === 'number');
+  // Use all reviews from backend
+  const userReviews = reviews;
 
   const sortedReviews = [...userReviews].sort((a, b) => {
     if (filter === 'newest') return b.id - a.id;

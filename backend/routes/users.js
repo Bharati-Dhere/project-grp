@@ -42,4 +42,34 @@ router.get('/', auth, async (req, res) => {
   res.json(users);
 });
 
+// Sync Clerk user to backend DB (upsert)
+router.post('/', async (req, res) => {
+  try {
+    const { email, name, role, password } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+    const bcrypt = require('bcryptjs');
+
+    let user = await User.findOne({ email });
+    if (user) {
+      user.name = name || user.name;
+      user.role = role || user.role;
+      if (password) {
+        user.password = await bcrypt.hash(password, 10);
+        user.hasPassword = true;
+      }
+      await user.save();
+      console.log('User updated:', user.email);
+    } else {
+      let hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+      let hasPassword = !!password;
+      user = await User.create({ email, name, role: role || 'user', password: hashedPassword, hasPassword });
+      console.log('User created:', user.email);
+    }
+    res.json(user);
+  } catch (err) {
+    console.error('Error syncing Clerk user:', err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
 module.exports = router;

@@ -18,6 +18,7 @@ import ReviewsPage from "./pages/ReviewsPage"; // ✅ NEW
 import AddReview from "./components/AddReview"; // ✅ NEW
 import SearchResults from "./pages/SearchResults";
 import AdminDashboard from "./pages/AdminDashboard";
+import ClerkSessionSync from "./components/ClerkSessionSync";
 import ProductDetails from "./pages/ProductDetails";
 import OrderNow from "./pages/OrderNow";
 import About from "./pages/About"; // ✅ NEW
@@ -57,6 +58,7 @@ function Layout({ children }) {
 function App() {
   return (
     <div className="min-h-screen flex flex-col">
+      <ClerkSessionSync />
       <Router>
         <Layout>
            <ToastContainer position="top-center" autoClose={500} />

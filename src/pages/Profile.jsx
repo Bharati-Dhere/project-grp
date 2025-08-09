@@ -381,9 +381,9 @@ export default function Profile() {
                 </div>
                 <input type="text" name="name" value={form.name || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Name" />
                 {errors.name && <p className="text-red-500 text-xs mb-1">{errors.name}</p>}
-                <input type="email" name="email" value={form.email || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Email" />
+                <input type="email" name="email" value={form.email || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Email (read-only)" />
                 {errors.email && <p className="text-red-500 text-xs mb-1">{errors.email}</p>}
-                <input type="text" name="phone" value={form.phone || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Phone" />
+                <input type="text" name="phone" value={form.phone || form.mobile || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Mobile (read-only)" />
                 <input type="text" name="address" value={form.address || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Address" />
                 <input type="text" name="city" value={form.city || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="City" />
                 <input type="text" name="state" value={form.state || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="State" />

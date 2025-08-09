@@ -1,28 +1,19 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiSearch, FiHeart, FiShoppingCart } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../context/AuthContext";
-
-
 export default function Navbar() {
-  const { user, logout } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showLoginDropdown, setShowLoginDropdown] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  // TODO: Replace with cart/wishlist context if available
   const cartCount = 0;
   const wishlistCount = 0;
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
-  };
+  const { user, logout } = useAuth();
+  const [showLoginDropdown, setShowLoginDropdown] = useState(false);
 
   return (
     <>
@@ -34,26 +25,25 @@ export default function Navbar() {
 
           <div className="hidden md:flex space-x-6">
             {["/", "/products", "/accessories", "/review", "/help"].map((path, i) => {
-  const labels = ["Home", "Products", "Accessories", "Reviews", "Help"];
-  // Only Home uses exact match, others use startsWith
-  const isActive =
-    path === "/"
-      ? location.pathname === "/"
-      : location.pathname === path || location.pathname.startsWith(path + "/");
-  return (
-    <Link
-      key={i}
-      to={path}
-      className={`px-2 py-1 rounded transition-colors duration-200 font-medium border-b-2 ${
-        isActive
-          ? "text-blue-700 bg-blue-50 border-blue-700"
-          : "text-gray-700 hover:text-black hover:bg-gray-100 border-transparent"
-      }`}
-    >
-      {labels[i]}
-    </Link>
-  );
-})}
+              const labels = ["Home", "Products", "Accessories", "Reviews", "Help"];
+              const isActive =
+                path === "/"
+                  ? location.pathname === "/"
+                  : location.pathname === path || location.pathname.startsWith(path + "/");
+              return (
+                <Link
+                  key={i}
+                  to={path}
+                  className={`px-2 py-1 rounded transition-colors duration-200 font-medium border-b-2 ${
+                    isActive
+                      ? "text-blue-700 bg-blue-50 border-blue-700"
+                      : "text-gray-700 hover:text-black hover:bg-gray-100 border-transparent"
+                  }`}
+                >
+                  {labels[i]}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex items-center space-x-4 text-xl">
@@ -85,18 +75,7 @@ export default function Navbar() {
               )}
             </form>
 
-
-            <span
-              className="relative cursor-pointer"
-              onClick={(e) => {
-                if (!user) {
-                  e.preventDefault();
-                  setShowAuthModal(true);
-                } else {
-                  navigate("/wishlist");
-                }
-              }}
-            >
+            <span className="relative cursor-pointer" onClick={() => navigate("/wishlist") }>
               <FiHeart className="text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
               {wishlistCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-pink-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-white">
@@ -105,18 +84,7 @@ export default function Navbar() {
               )}
             </span>
 
-
-            <span
-              className="relative cursor-pointer"
-              onClick={(e) => {
-                if (!user) {
-                  e.preventDefault();
-                  setShowAuthModal(true);
-                } else {
-                  navigate("/cart");
-                }
-              }}
-            >
+            <span className="relative cursor-pointer" onClick={() => navigate("/cart") }>
               <FiShoppingCart className="text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-white">
@@ -125,34 +93,22 @@ export default function Navbar() {
               )}
             </span>
 
-
             <span
-              className="cursor-pointer"
-              onClick={(e) => {
-                if (!user) {
-                  e.preventDefault();
-                  setShowAuthModal(true);
-                } else {
+              className="cursor-pointer flex items-center gap-2"
+              onClick={() => {
+                if (user) {
                   navigate("/profile");
+                } else {
+                  setShowAuthModal(true);
                 }
               }}
             >
-              <FaUserCircle className="text-2xl text-gray-700 hover:text-blue-700 transition-transform duration-200 hover:scale-110" />
+              <FaUserCircle className="text-2xl text-gray-700 hover:text-blue-700" />
             </span>
 
-            {user ? (
-              <>
-                <span className="ml-2 text-sm font-medium text-blue-700">
-                  {user.name || user.email || "User"}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="ml-2 text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
+
+            {/* Login Dropdown for User/Admin */}
+            {!user && (
               <div className="relative">
                 <button
                   className="text-sm bg-gradient-to-r from-blue-700 to-black text-white px-4 py-1.5 rounded shadow-lg hover:from-black hover:to-blue-700 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
@@ -204,14 +160,22 @@ export default function Navbar() {
                 </div>
               </div>
             )}
+  
 
+            {user && (
+              <button
+                onClick={logout}
+                className="ml-2 text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
       </nav>
-
-      {showAuthModal && (
+      {showAuthModal && !user ? (
         <AuthModal onClose={() => setShowAuthModal(false)} />
-      )}
+      ) : null}
     </>
   );
 }

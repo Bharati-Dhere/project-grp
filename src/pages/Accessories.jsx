@@ -70,46 +70,51 @@ export default function Accessories() {
     setPriceRange([0, 5000]);
   };
 
-  // Cart and wishlist logic for grid
+  // Cart and wishlist logic using backend
   const user = getLoggedInUser();
-  const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
-  const wishlistKey = user?.email ? `wishlist_${user.email}` : 'wishlist_guest';
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem(cartKey)) || []);
-  const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem(wishlistKey)) || []);
+  const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setCart(JSON.parse(localStorage.getItem(cartKey)) || []);
-      setWishlist(JSON.parse(localStorage.getItem(wishlistKey)) || []);
-    };
-    window.addEventListener('cartWishlistUpdated', handleUpdate);
-    return () => window.removeEventListener('cartWishlistUpdated', handleUpdate);
-    // eslint-disable-next-line
-  }, [cartKey, wishlistKey]);
+    if (user) {
+      // Fetch cart and wishlist from backend
+      import('../utils/api').then(api => {
+        api.fetchCart().then(setCart).catch(() => setCart([]));
+        api.fetchWishlist().then(setWishlist).catch(() => setWishlist([]));
+      });
+    } else {
+      setCart([]);
+      setWishlist([]);
+    }
+  }, [user]);
 
-  const handleAddToCart = (item) => {
+  const handleAddToCart = async (item) => {
+    if (!user) return alert('Please log in to use cart.');
     const updated = [...cart, item];
-    localStorage.setItem(cartKey, JSON.stringify(updated));
+    const api = await import('../utils/api');
+    await api.updateCart({ cart: updated });
     setCart(updated);
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleRemoveFromCart = (item) => {
-    const updated = cart.filter((c) => String(c.id) !== String(item.id));
-    localStorage.setItem(cartKey, JSON.stringify(updated));
+  const handleRemoveFromCart = async (itemId) => {
+    if (!user) return alert('Please log in to use cart.');
+    const updated = cart.filter((c) => String(c._id || c.id) !== String(itemId));
+    const api = await import('../utils/api');
+    await api.updateCart({ cart: updated });
     setCart(updated);
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleAddToWishlist = (item) => {
+  const handleAddToWishlist = async (item) => {
+    if (!user) return alert('Please log in to use wishlist.');
     const updated = [...wishlist, item];
-    localStorage.setItem(wishlistKey, JSON.stringify(updated));
+    const api = await import('../utils/api');
+    await api.updateWishlist({ wishlist: updated });
     setWishlist(updated);
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleRemoveFromWishlist = (item) => {
-    const updated = wishlist.filter((w) => String(w.id) !== String(item.id));
-    localStorage.setItem(wishlistKey, JSON.stringify(updated));
+  const handleRemoveFromWishlist = async (itemId) => {
+    if (!user) return alert('Please log in to use wishlist.');
+    const updated = wishlist.filter((w) => String(w._id || w.id) !== String(itemId));
+    const api = await import('../utils/api');
+    await api.updateWishlist({ wishlist: updated });
     setWishlist(updated);
-    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
   const handleCardClick = (id) => {

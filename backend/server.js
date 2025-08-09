@@ -1,8 +1,10 @@
-
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
+
+
 const adminRoutes = require('./routes/admin');
 
 const productRoutes = require('./routes/products');
@@ -21,13 +23,17 @@ const app = express();
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/api/check-email', require('./routes/checkEmail'));
+app.use('/api/change-password', require('./routes/changePassword'));
 
 
 
 app.use('/api/products', productRoutes);
+app.use('/api/clerk-webhook', require('./routes/clerkWebhook'));
 app.use('/api/accessories', accessoryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/set-password', require('./routes/setPassword'));
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', ordersRoutes);

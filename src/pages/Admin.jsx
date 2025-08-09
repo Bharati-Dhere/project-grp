@@ -10,6 +10,7 @@ const Admin = () => {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [signupUsers, setSignupUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [feedbacks, setFeedbacks] = useState([]);
   const [error, setError] = useState('');
   // Product management state
@@ -20,9 +21,21 @@ const Admin = () => {
   });
 
   useEffect(() => {
-    const storedUsers = JSON.parse(localStorage.getItem('signupUsers')) || [];
+    async function fetchUsers() {
+      setLoadingUsers(true);
+      try {
+        const res = await fetch('/api/users', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to fetch users');
+        const data = await res.json();
+        setSignupUsers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setSignupUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    fetchUsers();
     const storedFeedbacks = JSON.parse(localStorage.getItem('feedbacks')) || [];
-    setSignupUsers(storedUsers);
     setFeedbacks(storedFeedbacks);
   }, []);
 
@@ -146,7 +159,9 @@ const Admin = () => {
       {/* User Details Section */}
       <div className="mb-10">
         <h3 className="text-2xl font-semibold mb-4">Signed-up Users</h3>
-        {signupUsers.length === 0 ? (
+        {loadingUsers ? (
+          <p className="text-gray-600">Loading users...</p>
+        ) : signupUsers.length === 0 ? (
           <p className="text-gray-600">No user details available.</p>
         ) : (
           <table className="w-full text-left border border-gray-300">
@@ -154,23 +169,18 @@ const Admin = () => {
               <tr>
                 <th className="p-2">Name</th>
                 <th className="p-2">Email</th>
-                <th className="p-2">Password</th>
+                <th className="p-2">Role</th>
                 <th className="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
               {signupUsers.map((u, idx) => (
-                <tr key={idx} className="border-t border-gray-300">
+                <tr key={u._id || idx} className="border-t border-gray-300">
                   <td className="p-2">{u.name}</td>
                   <td className="p-2">{u.email}</td>
-                  <td className="p-2">{u.password}</td>
+                  <td className="p-2">{u.role || 'user'}</td>
                   <td className="p-2">
-                    <button
-                      className="bg-red-500 text-white px-3 py-1 rounded"
-                      onClick={() => handleDeleteUser(u.email)}
-                    >
-                      Delete
-                    </button>
+                    {/* Optionally implement delete via backend */}
                   </td>
                 </tr>
               ))}

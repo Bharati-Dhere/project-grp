@@ -57,7 +57,7 @@ export default function AdminCustomers() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 mb-2">
             <p><strong>Name:</strong> {selectedUser.name}</p>
             <p><strong>Email:</strong> {selectedUser.email}</p>
-            <p><strong>Mobile:</strong> {selectedUser.mobile || <span className="text-gray-400">N/A</span>}</p>
+            <p><strong>Password Status:</strong> {selectedUser.password === "clerk" ? "Password not set" : "Password set"}</p>
             {/* Address, Gender, Notifications may not exist in schema */}
           </div>
           <h3 className="font-semibold mt-4 mb-2">Order History</h3>

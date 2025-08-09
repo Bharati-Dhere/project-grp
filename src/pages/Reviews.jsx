@@ -11,9 +11,11 @@ export default function Reviews() {
   const [userRating, setUserRating] = useState(5);
 
   useEffect(() => {
-    // Load all reviews from localStorage
-    const allReviews = JSON.parse(localStorage.getItem("adminReviews")) || [];
-    setReviews(allReviews);
+    // Load all reviews from backend
+    fetch('/api/reviews', { credentials: 'include' })
+      .then(res => res.json())
+      .then(setReviews)
+      .catch(() => setReviews([]));
   }, []);
 
   const filteredReviews = reviews.filter((r) => {
@@ -27,8 +29,10 @@ export default function Reviews() {
     return match;
   });
 
-  const handleAddReview = () => {
-    const user = JSON.parse(localStorage.getItem("user"));
+  const handleAddReview = async () => {
+    // Get user from context or backend session
+    const res = await fetch('/api/auth/profile', { credentials: 'include' });
+    const user = await res.json();
     if (!user || !user.email) {
       setShowAuthModal(true);
       return;
@@ -41,9 +45,14 @@ export default function Reviews() {
       userEmail: user.email,
       userName: user.name || "User",
     };
-    const updated = [...reviews, newReview];
-    setReviews(updated);
-    localStorage.setItem("adminReviews", JSON.stringify(updated));
+    const reviewRes = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(newReview)
+    });
+    const savedReview = await reviewRes.json();
+    setReviews([...reviews, savedReview]);
     setUserReview("");
     setUserRating(5);
   };
