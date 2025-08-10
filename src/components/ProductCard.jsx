@@ -5,6 +5,7 @@ import { FaTrash, FaHeart, FaRegHeart } from "react-icons/fa";
 
 import AuthModal from "./AuthModal";
 import { useAuth } from "../context/AuthContext";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
 
 export default function ProductCard({
   product,
@@ -17,7 +18,7 @@ export default function ProductCard({
   showActions = true,
   pageType,
   style,
-  detailsPath = "product",
+  detailsPath = "productdetails",
 }) {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -27,37 +28,81 @@ export default function ProductCard({
   const isInCart = !!inCart;
   const isInWishlist = !!inWishlist;
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.stopPropagation();
     if (!user) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
     }
-    if (!isInCart && onAddToCart) {
-      onAddToCart();
+    try {
+      if (!isInCart) {
+        await updateCart(product._id || product.id, user.token);
+      } else {
+        // Remove from cart not implemented in backend; show error or implement if needed
+        alert('Remove from cart is not implemented in backend.');
+      }
       window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } else if (isInCart && onRemoveFromCart) {
-      onRemoveFromCart();
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    } catch (err) {
+      alert('Cart update failed.');
+      console.error(err);
     }
   };
 
-  const handleAddToWishlist = (e) => {
+  // const handleAddToWishlist = async (e) => {
+  //   e.stopPropagation();
+  //   if (!user) {
+  //     setAuthModalReason("wishlist");
+  //     setShowAuthModal(true);
+  //     return;
+  //   }
+  //   if (!isInWishlist && onAddToWishlist) {
+  //     onAddToWishlist();
+  //     window.dispatchEvent(new Event('cartWishlistUpdated'));
+  //   } else if (isInWishlist && onRemoveFromWishlist) {
+  //     onRemoveFromWishlist();
+  //     window.dispatchEvent(new Event('cartWishlistUpdated'));
+  //   } else if (!isInWishlist) {
+  //     // Fallback: add to wishlist via backend
+  //     try {
+  //       const wishlist = await fetchWishlist();
+  //       const updated = [...(wishlist || []), product];
+  //       await updateWishlist(updated.map(p => p._id || p.id));
+  //       await fetchWishlist();
+  //       window.dispatchEvent(new Event('cartWishlistUpdated'));
+  //     } catch {}
+  //   } else if (isInWishlist) {
+  //     // Fallback: remove from wishlist via backend
+  //     try {
+  //       const wishlist = await fetchWishlist();
+  //       const updated = (wishlist || []).filter((w) => (w._id || w.id) !== (product._id || product.id));
+  //       await updateWishlist(updated.map(p => p._id || p.id));
+  //       await fetchWishlist();
+  //       window.dispatchEvent(new Event('cartWishlistUpdated'));
+  //     } catch {}
+  //   }
+  // };
+
+  const handleAddToWishlist = async (e) => {
     e.stopPropagation();
     if (!user) {
       setAuthModalReason("wishlist");
       setShowAuthModal(true);
       return;
     }
-    if (!isInWishlist && onAddToWishlist) {
-      onAddToWishlist();
+    try {
+      if (!isInWishlist) {
+        await updateWishlist(product._id || product.id, "add", user.token);
+      } else {
+        alert('Remove from wishlist is not implemented in backend.');
+      }
       window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } else if (isInWishlist && onRemoveFromWishlist) {
-      onRemoveFromWishlist();
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    } catch (err) {
+      alert('Wishlist update failed.');
+      console.error(err);
     }
   };
+
 
   const handleOrderNow = (e) => {
     e.preventDefault();
@@ -78,8 +123,7 @@ export default function ProductCard({
     ) {
       return;
     }
-    // If this is an accessory, go to accessories details page
-    // Use _id if available, else id
+    // Use detailsPath prop to determine navigation
     const productId = product._id || product.id;
     navigate(`/${detailsPath}/${productId}`);
   };

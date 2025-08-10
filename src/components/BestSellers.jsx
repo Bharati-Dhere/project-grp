@@ -22,8 +22,8 @@ const BestSellers = () => {
     const loadBestSellers = async () => {
       setLoading(true);
       try {
-        const data = await fetchLatestBestSellers();
-        setBestSellers(data || []);
+  const data = await fetchLatestBestSellers();
+  setBestSellers((data && Array.isArray(data.data)) ? data.data : []);
       } catch (err) {
         setBestSellers([]);
       }
@@ -91,7 +91,7 @@ const BestSellers = () => {
         <div className="text-center py-8">Loading...</div>
       ) : (
         <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-          {bestSellers.map((product) => {
+          {bestSellers.slice(0, 4).map((product) => {
             const inCart = cart.some((c) => c.id === product.id || c._id === product._id);
             const inWishlist = wishlist.some((w) => w.id === product.id || w._id === product._id);
             return (

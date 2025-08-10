@@ -57,14 +57,16 @@ const AdminExistingProducts = () => {
 
   useEffect(() => {
     if (type === "Product") {
-      fetchProducts().then((data) => {
+      fetchProducts().then((res) => {
+        const data = res.data || [];
         setItems(data);
         setProductCount(data.length);
         setCategories(FIXED_PRODUCT_CATEGORIES);
         setBrands(FIXED_PRODUCT_BRANDS);
       });
     } else {
-      fetchAccessories().then((data) => {
+      fetchAccessories().then((res) => {
+        const data = res.data || [];
         console.log("Admin Accessories Loaded:", data);
         if (Array.isArray(data)) {
           data.forEach(acc => console.log("Accessory ID:", acc._id || acc.id, "Name:", acc.name));
@@ -89,12 +91,14 @@ const AdminExistingProducts = () => {
     if (window.confirm(`Are you sure you want to delete this ${type.toLowerCase()}?`)) {
       if (type === "Product") {
         await deleteProduct(id);
-        const data = await fetchProducts();
+        const res = await fetchProducts();
+        const data = res.data || [];
         setItems(data);
         setProductCount(data.length);
       } else {
         await deleteAccessory(id);
-        const data = await fetchAccessories();
+        const res = await fetchAccessories();
+        const data = res.data || [];
         setItems(data);
         setAccessoryCount(data.length);
       }

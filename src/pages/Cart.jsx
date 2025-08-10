@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchCart, updateCart } from "../utils/api";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
@@ -9,16 +9,22 @@ export default function Cart() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
 
   // Helper to reload cart from backend
   const reloadCart = async () => {
     try {
-      const data = await fetchCart();
-      setCart(data || []);
+      const [cartData, wishlistData] = await Promise.all([
+        fetchCart(user && user._id),
+        fetchWishlist(user && user._id)
+      ]);
+      setCart(cartData || []);
+      setWishlist(wishlistData || []);
     } catch {
       setCart([]);
+      setWishlist([]);
     }
   };
 
@@ -28,7 +34,7 @@ export default function Cart() {
       return;
     }
     reloadCart();
-    // Listen for cart updates from other components
+    // Always reload on cart/wishlist update event
     const handler = () => reloadCart();
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
@@ -45,11 +51,21 @@ export default function Cart() {
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
-  // Wishlist handled by backend; implement if needed
-  const handleAddToWishlist = () => {};
 
-  // Wishlist handled by backend; implement if needed
-  const handleRemoveFromWishlist = () => {};
+  // Add to wishlist from cart
+  const handleAddToWishlist = async (product) => {
+    try {
+      await updateWishlist(product._id || product.id, "add");
+      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    } catch {}
+  };
+  // Remove from wishlist from cart (optional, not shown in UI)
+  const handleRemoveFromWishlist = async (product) => {
+    try {
+      await updateWishlist(product._id || product.id, "remove");
+      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    } catch {}
+  };
 
   // Update to send all cart products to OrderNow
   const handleGoToOrderNow = () => {
@@ -85,8 +101,9 @@ export default function Cart() {
               key={product.id || product._id}
               product={product}
               inCart={true}
-              inWishlist={false}
+              inWishlist={!!wishlist.find((w) => (w._id || w.id) === (product._id || product.id))}
               onRemoveFromCart={() => handleRemoveFromCart(product.id || product._id)}
+              onAddToWishlist={() => handleAddToWishlist(product)}
               showActions={true}
               pageType="cart"
             />

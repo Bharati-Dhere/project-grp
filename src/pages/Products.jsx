@@ -23,7 +23,7 @@ const Products = () => {
     bestSeller: [],
     color: [],
     size: [],
-    inStock: false,
+    inStock: false
   });
   const [priceRange, setPriceRange] = useState([0, 150000]);
   const [sortOption, setSortOption] = useState("");
@@ -37,18 +37,18 @@ const Products = () => {
   useEffect(() => {
     async function fetchProductsAndUserData() {
       try {
-        const res = await fetch("http://localhost:5000/api/products");
-        const data = await res.json();
-        setProducts(data);
+        const res = await import('../utils/api');
+        const productsRes = await res.fetchProducts();
+  setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
       } catch (err) {
         setProducts([]);
       }
       // Load cart and wishlist from backend if logged in
-      if (user) {
+      if (user && user._id) {
         try {
           const [cartData, wishlistData] = await Promise.all([
-            fetchCart(),
-            fetchWishlist(),
+            fetchCart(user._id),
+            fetchWishlist(user._id),
           ]);
           setCart(cartData || []);
           setWishlist(wishlistData || []);
@@ -122,17 +122,15 @@ const Products = () => {
       return;
     }
     if (!wishlist.some((w) => (w._id || w.id) === (product._id || product.id))) {
-      const updated = [...wishlist, product];
-      setWishlist(updated);
-      await updateWishlist(updated.map(p => p._id || p.id));
+      setWishlist((prev) => [...prev, product]);
+      await updateWishlist(product._id || product.id, "add");
       window.dispatchEvent(new Event('cartWishlistUpdated'));
     }
   };
 
   const handleRemoveFromWishlist = async (id) => {
-    const updated = wishlist.filter((w) => (w._id || w.id) !== id);
-    setWishlist(updated);
-    await updateWishlist(updated.map(p => p._id || p.id));
+    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== id));
+    await updateWishlist(id, "remove");
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
@@ -206,7 +204,6 @@ const Products = () => {
         </div>
         <div className={gridView ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-6"}>
           {filteredProducts
-            .filter(product => product.category !== "Mobile Accessories")
             .map((product) => (
               <ProductCard
                 key={product._id || product.id}
@@ -214,7 +211,7 @@ const Products = () => {
                 detailsPath="productdetails"
                 onClick={() => handleCardClick(product._id)}
                 showBadges={true}
-                inCart={!!cart.find((c) => (c._id || c.id) === (product._id || product.id))}
+                inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id))}
                 inWishlist={!!wishlist.find((w) => (w._id || w.id) === (product._id || product.id))}
                 onAddToCart={() => handleAddToCart(product)}
                 onRemoveFromCart={() => handleRemoveFromCart(product._id || product.id)}

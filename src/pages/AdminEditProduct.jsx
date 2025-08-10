@@ -167,10 +167,16 @@ const AdminEditProduct = () => {
           <label htmlFor="isBestSeller">Best Seller</label>
         </div>
         <div className="flex items-center gap-2">
-          <input type="checkbox" name="freeDelivery" checked={!!product.freeDelivery} onChange={handleChange} id="freeDelivery" />
+          <input
+            type="checkbox"
+            name="freeDelivery"
+            checked={product.freeDelivery === true || product.freeDelivery === 'true'}
+            onChange={handleChange}
+            id="freeDelivery"
+          />
           <label htmlFor="freeDelivery">Free Delivery</label>
         </div>
-        {!product.freeDelivery && (
+        {!(product.freeDelivery === true || product.freeDelivery === 'true') && (
           <input className="w-full border p-2" name="deliveryPrice" placeholder="Delivery Price" type="number" value={product.deliveryPrice || ""} onChange={handleChange} />
         )}
         <div className="flex items-center gap-4">

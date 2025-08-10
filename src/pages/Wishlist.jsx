@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchWishlist, updateWishlist } from "../utils/api";
+import { fetchWishlist, updateWishlist, fetchCart, updateCart } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
@@ -10,44 +11,55 @@ export default function Wishlist() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
+  const [cart, setCart] = useState([]);
 
 
   // Helper to reload wishlist from backend
   const reloadWishlist = async () => {
     try {
-      const data = await fetchWishlist();
-      setWishlist(data || []);
-    } catch {
+      const [wishlistData, cartData] = await Promise.all([
+        fetchWishlist(),
+        fetchCart()
+      ]);
+      setWishlist(wishlistData || []);
+      setCart(cartData || []);
+    } catch (error) {
       setWishlist([]);
+      setCart([]);
     }
   };
-
   useEffect(() => {
     if (!user) {
       setShowAuthModal(true);
       return;
     }
-    reloadWishlist();
-    // Listen for wishlist updates from other components
+    reloadWishlist(); // Ensure this is the correct reloadWishlist function
+    // Always reload on cart/wishlist update event
     const handler = () => reloadWishlist();
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
 
   const handleRemoveFromWishlist = async (id) => {
-    // Remove product by ID, update backend with array of IDs
-    const updated = wishlist.filter((w) => (w._id || w.id) !== id);
-    setWishlist(updated);
+    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== id));
     try {
-      await updateWishlist(updated.map((p) => p._id || p.id));
+      await updateWishlist(id, "remove");
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
-  // Cart handled by backend; implement if needed
-  // (Optional: implement add to cart from wishlist if needed)
-  const handleAddToCart = () => {};
-  const handleRemoveFromCart = () => {};
+
+  // Add to cart from wishlist
+  const handleAddToCart = async (product) => {
+    try {
+      const cart = await fetchCart();
+      // If already in cart, do nothing
+      if ((cart || []).some((c) => (c._id || c.id) === (product._id || product.id))) return;
+      const updated = [...(cart || []), { product: product._id || product.id, quantity: 1 }];
+      await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    } catch {}
+  };
 
   // Update to send all wishlist products to OrderNow
   const handleGoToOrderNow = () => {
@@ -79,8 +91,9 @@ export default function Wishlist() {
               key={product.id || product._id}
               product={product}
               inWishlist={true}
-              inCart={false}
+              inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id))}
               onRemoveFromWishlist={() => handleRemoveFromWishlist(product.id || product._id)}
+              onAddToCart={() => handleAddToCart(product)}
               showActions={true}
               pageType="wishlist"
             />

@@ -6,7 +6,10 @@ import { getLoggedInUser } from "../utils/authUtils";
 import FilterSidebar from "../components/FilterSidebar";
 
 // Extract unique categories and brands from productsData for sidebar
-const getUnique = (arr, key) => [...new Set(arr.map(item => item[key]).filter(Boolean))];
+const getUnique = (arr, key) => {
+  if (!Array.isArray(arr)) return [];
+  return [...new Set(arr.map(item => item[key]).filter(Boolean))];
+};
 
 export default function Accessories() {
   const [accessories, setAccessories] = useState([]);
@@ -28,12 +31,13 @@ export default function Accessories() {
 
   useEffect(() => {
     fetchAccessories().then((data) => {
-      setAccessories(data);
+      setAccessories(Array.isArray(data.data) ? data.data : []);
     });
   }, []);
 
   useEffect(() => {
-    let result = [...accessories];
+    const safeAccessories = Array.isArray(accessories) ? accessories : [];
+    let result = [...safeAccessories];
     if (filters.category.length)
       result = result.filter(a => filters.category.includes(a.category));
     if (filters.brand.length)
@@ -104,21 +108,19 @@ export default function Accessories() {
   };
   const handleAddToWishlist = async (item) => {
     if (!user) return alert('Please log in to use wishlist.');
-    const updated = [...wishlist, item];
     const api = await import('../utils/api');
-    await api.updateWishlist({ wishlist: updated });
-    setWishlist(updated);
+    await api.updateWishlist(item._id || item.id, "add");
+    setWishlist((prev) => [...prev, item]);
   };
   const handleRemoveFromWishlist = async (itemId) => {
     if (!user) return alert('Please log in to use wishlist.');
-    const updated = wishlist.filter((w) => String(w._id || w.id) !== String(itemId));
     const api = await import('../utils/api');
-    await api.updateWishlist({ wishlist: updated });
-    setWishlist(updated);
+    await api.updateWishlist(itemId, "remove");
+    setWishlist((prev) => prev.filter((w) => String(w._id || w.id) !== String(itemId)));
   };
 
   const handleCardClick = (id) => {
-    navigate(`/accessoriesdetails/${id}`);
+  navigate(`/accessories/${id}`);
   };
 
 // Only show accessory-related categories and brands
@@ -196,7 +198,6 @@ const ACCESSORY_BRANDS = accessories.length
             .map((accessory) => {
               const inCart = cart.some((c) => String(c._id || c.id) === String(accessory._id || accessory.id));
               const inWishlist = wishlist.some((w) => String(w._id || w.id) === String(accessory._id || accessory.id));
-              const detailsPath = "accessories";
               return (
                 <ProductCard
                   key={accessory._id || accessory.id}
@@ -208,7 +209,7 @@ const ACCESSORY_BRANDS = accessories.length
                   onAddToWishlist={() => handleAddToWishlist(accessory)}
                   onRemoveFromWishlist={() => handleRemoveFromWishlist(accessory._id || accessory.id)}
                   showActions={true}
-                  detailsPath={detailsPath}
+                  detailsPath="accessories"
                   onClick={() => handleCardClick(accessory._id || accessory.id)}
                   showBadges={true}
                 />

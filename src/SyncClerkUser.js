@@ -11,7 +11,7 @@ export default function SyncClerkUser() {
         email: user.primaryEmailAddress.emailAddress,
         name: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : undefined,
         clerkId: user.id,
-      };
+      }; 
       fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -19,10 +19,25 @@ export default function SyncClerkUser() {
       })
         .then(res => res.json())
         .then(data => {
-          console.log("Clerk user synced to backend:", data);
+          // After syncing, fetch user from new public route
+          return fetch(`/api/users/by-email/${encodeURIComponent(payload.email)}`);
+        })
+        .then(res => res.json())
+        .then(userData => {
+          console.log("Clerk user fetched from backend:", userData);
+          // Log in Clerk user to set JWT cookie for session
+          return fetch("/api/auth/login/clerk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: payload.email })
+          });
+        })
+        .then(res => res.json())
+        .then(loginData => {
+          console.log("Clerk user session established:", loginData);
         })
         .catch(err => {
-          console.error("Error syncing Clerk user to backend:", err);
+          console.error("Error syncing, fetching, or logging in Clerk user:", err);
         });
     }
   }, [isSignedIn, user]);

@@ -14,8 +14,8 @@ const Offers = () => {
     const loadOffers = async () => {
       setLoading(true);
       try {
-        const data = await fetchLatestOffers();
-        setOffers(data || []);
+  const data = await fetchLatestOffers();
+  setOffers((data && Array.isArray(data.data)) ? data.data : []);
       } catch (err) {
         setOffers([]);
       }
@@ -36,7 +36,7 @@ const Offers = () => {
           <div className="text-center py-8">Loading...</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {offers.map((product) => (
+            {offers.slice(0, 5).map((product) => (
               <div key={product._id || product.id} className="w-full">
                 <ProductCard
                   product={product}

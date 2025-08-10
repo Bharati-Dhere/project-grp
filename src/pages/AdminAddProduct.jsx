@@ -96,7 +96,13 @@ const AdminAddProduct = () => {
           stock: Number(product.stock),
           isOffer: !!product.offer,
           isBestSeller: !!product.bestSeller,
-          description: product.description
+          description: product.description,
+          offerPrice: product.offer ? Number(product.offerPrice) : 0,
+          discountPercent: product.offer ? Number(product.discountPercent) : 0,
+          freeDelivery: !!product.freeDelivery,
+          deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
+          size: product.size,
+          tags: product.tags
         };
         await addAccessory(accessoryData);
       }

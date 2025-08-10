@@ -81,25 +81,45 @@ export const updateUserProfile = async (userId, profileData) => {
 };
 
 // Cart
-export const fetchCart = async () => {
-  const res = await axios.get(`${API_BASE}/cart`, { withCredentials: true });
+
+// Fetch cart for current user (requires userId)
+export const fetchCart = async (userId) => {
+  const res = await axios.get(`${API_BASE}/cart/${userId}`, { withCredentials: true });
   return res.data;
 };
 
-export const updateCart = async (cartData) => {
-  const res = await axios.put(`${API_BASE}/cart`, cartData, { withCredentials: true });
+
+// Add to cart (single product)
+export const updateCart = async (productId, userToken) => {
+  const res = await axios.post(`${API_BASE}/cart/add`, { productId }, {
+    withCredentials: true,
+    headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
+  });
   return res.data;
 };
 
 // Wishlist
-export const fetchWishlist = async () => {
-  const res = await axios.get(`${API_BASE}/wishlist`, { withCredentials: true });
+
+// Fetch wishlist for current user (requires userId)
+export const fetchWishlist = async (userId) => {
+  const res = await axios.get(`${API_BASE}/wishlist/${userId}`, { withCredentials: true });
   return res.data;
 };
 
-export const updateWishlist = async (wishlistData) => {
-  const res = await axios.put(`${API_BASE}/wishlist`, wishlistData, { withCredentials: true });
-  return res.data;
+
+// Add/remove from wishlist (single product)
+export const updateWishlist = async (productId, action, userToken) => {
+  if (action === "add") {
+    const res = await axios.post(`${API_BASE}/wishlist/add`, { productId }, {
+      withCredentials: true,
+      headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
+    });
+    return res.data;
+  } else if (action === "remove") {
+    // Remove by sending a new endpoint or implement in backend if needed
+    // For now, fallback to re-fetching and updating wishlist array if backend supports
+    throw new Error('Remove from wishlist endpoint not implemented');
+  }
 };
 
 // Orders

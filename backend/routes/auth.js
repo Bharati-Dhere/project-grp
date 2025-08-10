@@ -1,9 +1,27 @@
+
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const router = express.Router();
 const admin = require('firebase-admin');
+
+// Clerk/Google login by email only (no password required)
+router.post('/login/clerk', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+    // Only allow if user has no password set (i.e., Clerk/Google user)
+    if (user.hasPassword) return res.status(403).json({ message: 'Password login required' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // Signup
 router.post('/signup', async (req, res) => {
@@ -76,11 +94,15 @@ router.post('/google-login', async (req, res) => {
         name: decoded.name || decoded.email,
       });
     }
-    // Optionally set a session/cookie here
+    // Set JWT cookie for session, just like normal login
+    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    res.cookie('token', jwtToken, { httpOnly: true, sameSite: 'lax' });
     res.json({
-      _id: user._id,
-      email: user.email,
-      name: user.name,
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+      }
     });
   } catch (err) {
     console.error('Google login backend error:', err);

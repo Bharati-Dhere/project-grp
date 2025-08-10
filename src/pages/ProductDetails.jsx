@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaStar } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
-import productsData from "../utils/productsData";
-import { getLoggedInUser } from "../utils/authUtils";
+import { fetchProducts, fetchCart, updateCart, fetchWishlist, updateWishlist } from '../utils/api';
+import { useAuth } from "../context/AuthContext";
 import AuthModal from "../components/AuthModal";
 import ProductCard from '../components/ProductCard';
+
+
 
 function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [mainImage, setMainImage] = useState("");
   const [amount, setAmount] = useState(1);
   const [userRating, setUserRating] = useState(5);
+  const [userReview, setUserReview] = useState("");
   const [showToast, setShowToast] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
   const [ratingCount, setRatingCount] = useState(0);
   const [avgRating, setAvgRating] = useState(null);
-  const user = getLoggedInUser();
+  const [reviews, setReviews] = useState([]);
+  const [related, setRelated] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
+  // Fetch product, reviews, related, cart, wishlist
   useEffect(() => {
-    async function fetchProduct() {
+    async function fetchAll() {
       try {
         const res = await fetch(`http://localhost:5000/api/products/${id}`);
         const data = await res.json();
@@ -31,22 +40,47 @@ function ProductDetails() {
         setMainImage(data?.images ? data.images[0] : data?.image);
         setRatingCount(data.ratingCount || 0);
         setAvgRating(data.avgRating || null);
+        setReviews(data.reviews || []);
+        // Fetch related products and accessories from backend (same category or brand, exclude self)
+        const [allProductsRes, allAccessoriesRes] = await Promise.all([
+          fetchProducts(),
+          (await import('../utils/api')).fetchAccessories()
+        ]);
+        const allProducts = Array.isArray(allProductsRes.data) ? allProductsRes.data : [];
+        const allAccessories = Array.isArray(allAccessoriesRes.data) ? allAccessoriesRes.data : [];
+        const relatedItems = [
+          ...allProducts.filter(
+            (p) =>
+              (p._id !== id && p.id !== id) &&
+              (p.category === data.category || p.brand === data.brand)
+          ),
+          ...allAccessories.filter(
+            (a) =>
+              (a._id !== id && a.id !== id) &&
+              (a.category === data.category || a.brand === data.brand)
+          )
+        ];
+        setRelated(relatedItems.slice(0, 4));
       } catch (err) {
         setProduct(null);
       }
+      // Cart & Wishlist from backend
+      try {
+        const cartData = await fetchCart();
+        setCart(cartData || []);
+        setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === id));
+      } catch {}
+      try {
+        const wishlistData = await fetchWishlist();
+        setWishlist(wishlistData || []);
+        setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === id));
+      } catch {}
     }
-    fetchProduct();
-    // Cart & Wishlist logic
-    const user = getLoggedInUser();
-    const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
-    const wishlistKey = user?.email ? `wishlist_${user.email}` : 'wishlist_guest';
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    setIsInCart(cart.some((c) => String(c.id) === String(id)));
-    setIsInWishlist(wishlist.some((w) => String(w.id) === String(id)));
+    fetchAll();
   }, [id]);
 
-  const handleAddRating = async () => {
+  // Add review (rating + text)
+  const handleAddReview = async () => {
     if (!user || !user.email) {
       setAuthModalReason("review");
       setShowAuthModal(true);
@@ -56,18 +90,20 @@ function ProductDetails() {
       await fetch(`http://localhost:5000/api/products/${id}/rate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: user.email, value: userRating })
+        body: JSON.stringify({ user: user.email, value: userRating, review: userReview })
       });
       setShowToast(true);
+      setUserReview("");
       setTimeout(() => setShowToast(false), 3000);
-      // Refetch product to update rating
+      // Refetch product to update rating and reviews
       const res = await fetch(`http://localhost:5000/api/products/${id}`);
       const data = await res.json();
       setProduct(data);
       setRatingCount(data.ratingCount || 0);
       setAvgRating(data.avgRating || null);
+      setReviews(data.reviews || []);
     } catch (err) {
-      alert("Error submitting rating");
+      alert("Error submitting review");
     }
   };
 
@@ -78,74 +114,63 @@ function ProductDetails() {
       setShowAuthModal(true);
       return;
     }
-    // Reduce stock quantity
-    const stored = localStorage.getItem("products");
-    let products = stored ? JSON.parse(stored) : productsData;
-    products = products.map((p) =>
-      String(p.id) === String(id)
-        ? { ...p, stock: Math.max((p.stock || 0) - amount, 0), inStock: (p.stock || 0) - amount > 0 }
-        : p
-    );
-    localStorage.setItem("products", JSON.stringify(products));
     navigate("/ordernow", { state: { product, amount } });
   };
 
-  // Restrict guests from adding/removing cart/wishlist
-  const handleAddToCart = () => {
+  // Cart/Wishlist handlers using backend
+  const handleAddToCart = async () => {
     if (!user || !user.email) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
     }
-    const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    if (!cart.some((c) => String(c.id) === String(id))) {
-      cart.push({ ...product, amount });
-      localStorage.setItem(cartKey, JSON.stringify(cart));
-      setIsInCart(true);
-    }
+    const updated = [...cart, { product: product._id || product.id, quantity: amount }];
+    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+    // Always reload cart from backend for true state
+    const cartData = await fetchCart();
+    setCart(cartData || []);
+    setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === (product._id || product.id)));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleRemoveFromCart = () => {
+  const handleRemoveFromCart = async () => {
     if (!user || !user.email) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
     }
-    const cartKey = user?.email ? `cart_${user.email}` : 'cart_guest';
-    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    cart = cart.filter((c) => String(c.id) !== String(id));
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-    setIsInCart(false);
+    const updated = cart.filter((c) => (c.product?._id || c.product?.id || c._id || c.id) !== (product._id || product.id));
+    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+    const cartData = await fetchCart();
+    setCart(cartData || []);
+    setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === (product._id || product.id)));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleAddToWishlist = () => {
+  const handleAddToWishlist = async () => {
     if (!user || !user.email) {
       setAuthModalReason("wishlist");
       setShowAuthModal(true);
       return;
     }
-    const wishlistKey = user?.email ? `wishlist_${user.email}` : 'wishlist_guest';
-    const wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    if (!wishlist.some((w) => String(w.id) === String(id))) {
-      wishlist.push(product);
-      localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
-      setIsInWishlist(true);
-    }
+    await updateWishlist(product._id || product.id, "add");
+    // Always reload wishlist from backend for true state
+    const wishlistData = await fetchWishlist();
+    setWishlist(wishlistData || []);
+    setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === (product._id || product.id)));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  const handleRemoveFromWishlist = () => {
+  const handleRemoveFromWishlist = async () => {
     if (!user || !user.email) {
       setAuthModalReason("wishlist");
       setShowAuthModal(true);
       return;
     }
-    const wishlistKey = user?.email ? `wishlist_${user.email}` : 'wishlist_guest';
-    let wishlist = JSON.parse(localStorage.getItem(wishlistKey)) || [];
-    wishlist = wishlist.filter((w) => String(w.id) !== String(id));
-    localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
-    setIsInWishlist(false);
+    await updateWishlist(product._id || product.id, "remove");
+    const wishlistData = await fetchWishlist();
+    setWishlist(wishlistData || []);
+    setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === (product._id || product.id)));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
-  // Use backend rating summary if available
-  const ratingSummary = product?.ratingSummary || {};
 
   if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
@@ -184,10 +209,17 @@ function ProductDetails() {
         {/* Product Details Context */}
         <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left px-2 md:px-8">
           <h2 className="text-3xl font-extrabold text-blue-700 mb-3 tracking-tight">{product.name}</h2>
+          <p className="text-gray-700 mb-1 text-lg font-semibold">{product.brand}</p>
+          {product.freeDelivery && (
+            <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold mb-2">Free Delivery</span>
+          )}
           <p className="text-gray-700 mb-3 text-lg">{product.description}</p>
           <div className="flex flex-wrap gap-4 items-center mb-3">
             <span className="text-green-600 font-bold text-2xl">₹{product.price}</span>
-            <span className="text-yellow-500 text-lg flex items-center">{product.rating}★</span>
+            <span className="text-yellow-500 text-lg flex items-center">
+              <FaStar className="mr-1" />
+              {avgRating ? avgRating : '0'} / 5
+            </span>
             {product.offer && (
               <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-semibold shadow-sm animate-pulse">{product.offer}</span>
             )}
@@ -243,69 +275,112 @@ function ProductDetails() {
         </div>
       </div>
 
-      {/* Rating Summary */}
+      {/* Reviews Section */}
       <div className="mt-10">
-        <h3 className="text-lg font-bold mb-3">Overall Rating Breakdown</h3>
-        <div className="space-y-2">
-          {[5, 4, 3, 2, 1].map((star) => (
-            <div key={star} className="flex items-center gap-2">
-              <span className="w-10 text-right text-sm font-medium">{star}★</span>
-              <div className="w-full bg-gray-200 rounded h-3">
-                <div
-                  style={{ width: `${ratingSummary[star] || 0}%` }}
-                  className="h-full bg-yellow-400 rounded"
-                ></div>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-3">
+          Reviews ({reviews.length})
+          <span className="flex items-center gap-1 text-yellow-500 text-xl">
+            {[1,2,3,4,5].map(star => (
+              <FaStar key={star} className={avgRating && avgRating >= star ? 'text-yellow-400' : 'text-gray-300'} />
+            ))}
+            <span className="ml-2 text-base text-gray-700 font-semibold">{avgRating ? avgRating : 0}/5</span>
+          </span>
+        </h3>
+
+        {/* Modern UI: Star Distribution Progress Bars */}
+        <div className="mb-6 max-w-md">
+          {[5,4,3,2,1].map(star => {
+            const count = reviews.filter(r => r.value === star).length;
+            const percent = reviews.length ? (count / reviews.length) * 100 : 0;
+            return (
+              <div key={star} className="flex items-center gap-2 mb-1">
+                <span className="w-10 flex items-center gap-1">
+                  <FaStar className="text-yellow-400" size={16} />
+                  <span className="text-sm font-medium">{star}</span>
+                </span>
+                <div className="flex-1 bg-gray-200 rounded h-3 overflow-hidden">
+                  <div
+                    className={`h-3 rounded ${percent > 0 ? 'bg-yellow-400' : 'bg-gray-300'}`}
+                    style={{ width: `${percent}%`, transition: 'width 0.4s' }}
+                  ></div>
+                </div>
+                <span className="w-8 text-right text-xs text-gray-600">{count}</span>
               </div>
-              <span className="w-12 text-sm text-gray-600">{ratingSummary[star] || 0}%</span>
+            );
+          })}
+        </div>
+        {user && user.email ? (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-semibold">Your Rating:</span>
+              <span className="flex items-center gap-1">
+                {[1,2,3,4,5].map(star => (
+                  <FaStar
+                    key={star}
+                    className={userRating >= star ? 'text-yellow-400 cursor-pointer' : 'text-gray-300 cursor-pointer'}
+                    size={24}
+                    onClick={() => setUserRating(star)}
+                  />
+                ))}
+              </span>
+            </div>
+            <textarea
+              value={userReview}
+              onChange={e => setUserReview(e.target.value)}
+              placeholder="Write your review..."
+              className="w-full border rounded p-2 mb-2"
+              rows={2}
+            />
+            <button onClick={handleAddReview} className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 font-semibold">Submit Review</button>
+          </div>
+        ) : (
+          <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">Log in to add a review.</div>
+        )}
+        <div className="space-y-4">
+          {reviews.length === 0 && <div className="text-gray-500">No reviews yet.</div>}
+          {(showAllReviews ? reviews : reviews.slice(0,5)).map((r, idx) => (
+            <div key={idx} className="bg-white border rounded-lg p-3 shadow flex flex-col md:flex-row md:items-center gap-2">
+              <div className="flex items-center gap-2 mb-1 md:mb-0">
+                <span className="font-bold text-blue-700">{r.user}</span>
+                <span className="text-yellow-500 flex items-center">
+                  {[1,2,3,4,5].map(star => (
+                    <FaStar key={star} className={r.value >= star ? 'text-yellow-400' : 'text-gray-300'} size={18} />
+                  ))}
+                  <span className="ml-1 text-sm">{r.value}</span>
+                </span>
+              </div>
+              <div className="flex-1 text-gray-700">{r.review}</div>
             </div>
           ))}
         </div>
+        {reviews.length > 5 && (
+          <div className="text-center mt-4">
+            <button
+              className="text-blue-600 underline font-semibold"
+              onClick={() => setShowAllReviews(v => !v)}
+            >
+              {showAllReviews ? 'Hide extra reviews' : 'View All Reviews'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Related Products Section */}
       <div className="mt-10">
         <h3 className="text-xl font-bold mb-4">Related Products</h3>
         <div className="grid gap-4 md:grid-cols-2">
-          {productsData
-            .filter(
-              (p) =>
-                p.id !== product?.id &&
-                (
-                  p.category === product?.category ||
-                  p.brand === product?.brand ||
-                  p.category?.toLowerCase() === "accessories"
-                )
-            )
-            .slice(0, 4)
-            .map((p) => (
-              (() => {
-                const current = getLoggedInUser();
-                const isLoggedIn = !!(current && current.email);
-                const cartKey = current?.email ? `cart_${current.email}` : 'cart_guest';
-                const wishlistKey = current?.email ? `wishlist_${current.email}` : 'wishlist_guest';
-                const cartArr = isLoggedIn ? (JSON.parse(localStorage.getItem(cartKey)) || []) : [];
-                const wishlistArr = isLoggedIn ? (JSON.parse(localStorage.getItem(wishlistKey)) || []) : [];
-                const inCart = isLoggedIn ? cartArr.some((c) => c.id === p.id) : false;
-                const inWishlist = isLoggedIn ? wishlistArr.some((w) => w.id === p.id) : false;
-                return (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    detailsPath={p.category?.toLowerCase() === "accessories" ? "accessories" : "product"}
-                    inCart={inCart}
-                    inWishlist={inWishlist}
-                    onAddToCart={isLoggedIn ? () => {/* add to cart logic here */} : undefined}
-                    onRemoveFromCart={isLoggedIn ? () => {/* remove from cart logic here */} : undefined}
-                    onAddToWishlist={isLoggedIn ? () => {/* add to wishlist logic here */} : undefined}
-                    onRemoveFromWishlist={isLoggedIn ? () => {/* remove from wishlist logic here */} : undefined}
-                    showActions={isLoggedIn}
-                  />
-                );
-              })()
-            ))}
+          {related.map((p) => (
+            <ProductCard
+              key={p._id || p.id}
+              product={p}
+              detailsPath="productdetails"
+              showActions={!!user}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
 }
+
 export default ProductDetails;

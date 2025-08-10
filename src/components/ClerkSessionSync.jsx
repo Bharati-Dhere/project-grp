@@ -32,11 +32,10 @@ export default function ClerkSessionSync() {
     (async () => {
       try {
         console.log("[ClerkSessionSync] Checking/Upserting user in backend:", { email, name });
-        const checkRes = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+  const checkRes = await fetch(`/api/users/by-email/${encodeURIComponent(email)}`);
         let exists = false;
         if (checkRes.ok) {
           const checkData = await checkRes.json();
-          if (Array.isArray(checkData) && checkData.length > 0) exists = true;
           if (checkData && checkData.email) exists = true;
         }
         if (!exists) {

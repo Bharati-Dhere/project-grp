@@ -1,33 +1,12 @@
 const express = require('express');
-const User = require('../models/User');
-const Product = require('../models/Product');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const auth = require('../middleware/auth');
+const cartController = require('../controllers/cartController');
 
-function auth(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    req.userId = decoded.id;
-    next();
-  } catch {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-}
+// Add to cart (POST /cart/add)
+router.post('/add', auth, cartController.addToCart);
 
-// Get cart
-router.get('/', auth, async (req, res) => {
-  const user = await User.findById(req.userId).populate('cart.product');
-  res.json(user.cart);
-});
-
-// Update cart
-router.put('/', auth, async (req, res) => {
-  const user = await User.findById(req.userId);
-  user.cart = req.body.cart;
-  await user.save();
-  res.json(user.cart);
-});
+// Get cart (GET /cart/:userId)
+router.get('/:userId', auth, cartController.getCart);
 
 module.exports = router;

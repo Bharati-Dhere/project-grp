@@ -1,20 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiSearch, FiHeart, FiShoppingCart } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../context/AuthContext";
+import { fetchCart, fetchWishlist } from "../utils/api";
 export default function Navbar() {
+  const { user, logout } = useAuth();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const cartCount = 0;
-  const wishlistCount = 0;
-  const { user, logout } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
 
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (user && user._id) {
+        try {
+          const cart = await fetchCart(user._id);
+          setCartCount(Array.isArray(cart) ? cart.length : (cart?.items?.length || 0));
+        } catch (e) {
+          setCartCount(0);
+        }
+        try {
+          const wishlist = await fetchWishlist(user._id);
+          setWishlistCount(Array.isArray(wishlist) ? wishlist.length : (wishlist?.items?.length || 0));
+        } catch (e) {
+          setWishlistCount(0);
+        }
+      } else {
+        setCartCount(0);
+        setWishlistCount(0);
+      }
+    };
+    fetchCounts();
+    // Listen for global cart/wishlist changes
+    const handler = () => fetchCounts();
+    window.addEventListener('cartWishlistUpdated', handler);
+    return () => window.removeEventListener('cartWishlistUpdated', handler);
+  }, [user]);
   return (
     <>
       <nav className="bg-white shadow-md sticky top-0 z-50 border-b border-gray-200">
@@ -173,6 +200,7 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
+
       {showAuthModal && !user ? (
         <AuthModal onClose={() => setShowAuthModal(false)} />
       ) : null}

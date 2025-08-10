@@ -212,7 +212,7 @@ useEffect(() => {
               <>
                 <div className="flex flex-col gap-4">
                   {orderProducts.map((p, idx) => (
-                    <div key={p.id} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
+                    <div key={p._id || p.id || idx} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
                       <img src={p.image} alt={p.name} className="w-16 h-16 object-contain rounded bg-gray-100" />
                       <div className="flex-1">
                         <div className="font-medium text-gray-800">{p.name}</div>
@@ -263,10 +263,10 @@ useEffect(() => {
                   ) : (
                     <div className="rounded-md border border-blue-200 bg-blue-50 px-2 py-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-2">
-                        {wishlistProducts.map((p) => {
+                        {wishlistProducts.map((p, idx) => {
                           const isInOrder = orderProducts.some(item => item.id === p.id);
                           return (
-                            <div key={p.id} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
+                            <div key={p._id || p.id || idx} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
                               {/* Product image */}
                               <div className="h-40 w-full bg-gray-100 flex items-center justify-center rounded-t-xl overflow-hidden">
                                 {p.image ? (
@@ -340,8 +340,8 @@ useEffect(() => {
             {orderProducts.length > 0 ? (
               <>
                 <div className="flex flex-col gap-4">
-                  {orderProducts.map((p) => (
-                    <div key={p.id} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
+                  {orderProducts.map((p, idx) => (
+                    <div key={p._id || p.id || idx} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
                       <img src={p.image} alt={p.name} className="w-12 h-12 object-contain rounded bg-gray-100" />
                       <div className="flex-1">
                         <div className="font-medium text-gray-800">{p.name}</div>

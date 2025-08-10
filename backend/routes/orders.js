@@ -16,19 +16,12 @@ function auth(req, res, next) {
   }
 }
 
+const orderController = require('../controllers/orderController');
+
 // Get orders
-router.get('/', auth, async (req, res) => {
-  const orders = await Order.find({ user: req.userId }).populate('items.product');
-  res.json(orders);
-});
+router.get('/', auth, orderController.getAllOrders);
 
 // Place order
-router.post('/', auth, async (req, res) => {
-  const { items, total, address, paymentInfo } = req.body;
-  const order = await Order.create({ user: req.userId, items, total, address, paymentInfo });
-  // Add order to user's orders array
-  await User.findByIdAndUpdate(req.userId, { $push: { orders: order._id } });
-  res.status(201).json(order);
-});
+router.post('/', auth, orderController.placeOrder);
 
 module.exports = router;
