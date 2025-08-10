@@ -5,6 +5,9 @@ import { useSignIn, useSignUp, useClerk } from "@clerk/clerk-react";
 import { useAuth } from "../context/AuthContext";
 import { FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
+
+
+
 // role is now passed as a prop, not managed in modal
 export default function AuthModal({ onClose, role }) {
   const { login } = useAuth();
@@ -22,6 +25,7 @@ export default function AuthModal({ onClose, role }) {
   const [loading, setLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
 
+  // If role prop changes, reset signup/login forms (optional, for safety)
   useEffect(() => {
     setLoginData({ email: "", password: "" });
     setSignupData({ email: "", password: "", confirmPassword: "" });
@@ -34,6 +38,39 @@ export default function AuthModal({ onClose, role }) {
     setForgotError("");
     setGoogleError("");
   }, [role]);
+
+  const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
+  const { setSession, openSignIn, signOut } = useClerk();
+
+  // Google login handler
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setGoogleError("");
+    try {
+      if (typeof signOut === "function") {
+        await signOut();
+      }
+      await signIn.authenticateWithRedirect({ strategy: "oauth_google", redirectUrl: window.location.href });
+      // After redirect, handle backend sync in a useEffect or callback (not possible here)
+    } catch (err) {
+      setGoogleError(err.errors?.[0]?.message || "Google login failed. Try signing up first.");
+    }
+    setLoading(false);
+  }
+
+  // Google signup handler
+  const handleGoogleSignup = async () => {
+    setLoading(true);
+    setGoogleError("");
+    try {
+      await signUp.authenticateWithRedirect({ strategy: "oauth_google", redirectUrl: window.location.href });
+      // After redirect, handle backend sync in a useEffect or callback (not possible here)
+    } catch (err) {
+      setGoogleError(err.errors?.[0]?.message || "Google signup failed.");
+    }
+    setLoading(false);
+  };
 
   // Login handler using Clerk
   const handleLogin = async (e) => {
@@ -60,30 +97,10 @@ export default function AuthModal({ onClose, role }) {
         setLoading(false);
         return;
       }
-      // Always upsert user in backend after login (email or Google)
-      try {
-        await fetch("/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: loginData.email, role: role || 'user', password: loginData.password })
-        });
-      } catch {}
-      // Always fetch latest user from backend after login
-      try {
-        const res2 = await fetch(`/api/users/by-email/${encodeURIComponent(loginData.email)}`);
-        const userData = await res2.json();
-        if (userData && userData.data) {
-          login(userData.data);
-        } else {
-          login({ email: loginData.email, role: data.role || role });
-        }
-      } catch {
-        login({ email: loginData.email, role: data.role || role });
-      }
+      login(data.user || { email: loginData.email, role: data.role || role });
       toast.success("Welcome!");
       setLoginErrors({});
-      if (onClose) onClose();
-      if (typeof window.setAuthModalActive === 'function') window.setAuthModalActive(false);
+      onClose && onClose();
     } catch (err) {
       const msg = err.errors?.[0]?.message || err.message || "Login failed.";
       setLoginErrors({ general: msg.includes('strategy') ? 'Invalid email or password.' : msg });
@@ -120,26 +137,22 @@ export default function AuthModal({ onClose, role }) {
           const prep = await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
           setSignupStep(1);
           setLoading(false);
-          // Always upsert user in backend after login (email or Google)
-          try {
-            await fetch("/api/users", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email: loginData.email, role: role || 'user', password: loginData.password })
-            });
-          } catch {}
-          // Always fetch latest user from backend after login
-          try {
-            const res2 = await fetch(`/api/users/by-email/${encodeURIComponent(loginData.email)}`);
-            const userData = await res2.json();
-            if (userData && userData.data) {
-              login(userData.data);
-            } else {
-              login({ email: loginData.email, role: data.role || role });
-            }
-          } catch {
-            login({ email: loginData.email, role: data.role || role });
-          }
+          return;
+        } catch (err2) {
+          setSignupErrors({ general: err2.errors?.[0]?.message || err2.message || "Could not send verification code." });
+          setLoading(false);
+          return;
+        }
+      }
+      setSignupErrors({ general: err.errors?.[0]?.message || err.message || "Could not send verification code." });
+    }
+    setLoading(false);
+  }
+
+  // Step 2: Verify code and complete signup
+  const handleSignupVerifyAndComplete = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     setSignupErrors({});
     setGoogleError("");
     if (!signupVerificationCode) {
@@ -166,6 +179,7 @@ export default function AuthModal({ onClose, role }) {
           verified = true;
         }
       } catch (err) {
+        // If already verified, Clerk throws an error with code 'verification_already_verified'
         if (err.errors && err.errors[0]?.code === 'verification_already_verified') {
           verified = true;
         } else {
@@ -176,6 +190,7 @@ export default function AuthModal({ onClose, role }) {
       }
       if (verified) {
         await signUp.update({ password: signupData.password });
+        // Create user in backend database with role
         try {
           await fetch("/api/users", {
             method: "POST",
@@ -183,15 +198,18 @@ export default function AuthModal({ onClose, role }) {
             body: JSON.stringify({ email: signupData.email, role, password: signupData.password })
           });
         } catch (err) {
+          // Optionally show a warning, but don't block login
           toast.warn("Signup succeeded, but failed to save user in backend.");
         }
         setSignupErrors({});
+        // Sign out to clear any session before switching to login
         if (typeof signOut === 'function') await signOut();
         setIsLogin(true);
         setLoginData({ email: signupData.email, password: "" });
         toast.success("Signup successful! Please log in.");
         setSignupStep(0);
         setSignupVerificationCode("");
+        // Automatically close modal after signup success
         if (onClose) setTimeout(() => onClose(), 500);
       } else {
         setSignupErrors({ general: "Invalid or expired code. Please try again." });
@@ -427,7 +445,12 @@ export default function AuthModal({ onClose, role }) {
         </div>
       </div>
     </div>
-
   );
 }
 
+/*
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+*/
