@@ -137,23 +137,20 @@ useEffect(() => {
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("loggedInUser"));
+      const user = JSON.parse(localStorage.getItem("loggedInUser")) || JSON.parse(localStorage.getItem("user"));
       let newOrder = null;
       if (orderProducts && Array.isArray(orderProducts)) {
+        const items = orderProducts.map(p => ({
+          product: p._id || p.id,
+          quantity: p.quantity || 1,
+          price: p.price
+        }));
+        const total = orderProducts.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0) + orderProducts.reduce((sum, p) => sum + (p.deliveryPrice || 0) * (p.quantity || 1), 0);
         newOrder = {
-          products: orderProducts.map(p => ({
-            name: p.name,
-            productId: p.id,
-            quantity: p.quantity || 1,
-            price: p.price,
-            deliveryPrice: p.deliveryPrice || 0
-          })),
-          userEmail: user?.email || "guest",
-          shipping,
-          payment,
-          status: "Processing",
-          date: new Date().toISOString(),
-          deliveryDate
+          items,
+          total,
+          address: shipping.address,
+          paymentInfo: payment
         };
       }
       if (newOrder) {

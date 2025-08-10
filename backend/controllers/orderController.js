@@ -1,8 +1,28 @@
+// Update order status and delivery date (admin)
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { status, deliveryDate } = req.body;
+    const update = {};
+    if (status) update.status = status;
+    if (deliveryDate) update.deliveryDate = deliveryDate;
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true }
+    ).populate('user', 'email name').populate('items.product', 'name price image');
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    res.json({ success: true, message: 'Order updated', data: order });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
 const Order = require('../models/Order');
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find();
+    const orders = await Order.find()
+      .populate('user', 'email name')
+      .populate('items.product', 'name price image');
     res.json({ success: true, message: 'Orders fetched', data: orders });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', data: null });

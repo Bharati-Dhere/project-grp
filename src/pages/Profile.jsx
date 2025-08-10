@@ -132,8 +132,8 @@ export default function Profile() {
         });
         setAvatar(userData.profile?.avatar || null);
         setNotifications(userData.profile?.notifications || false);
-        const ordersData = await fetchOrders();
-        setOrders(ordersData.data || ordersData);
+  const ordersData = await fetchOrders();
+  setOrders(Array.isArray(ordersData) ? ordersData : []);
       } catch (err) {
         setShowAuthModal(true);
         setAuthModalActive(true);

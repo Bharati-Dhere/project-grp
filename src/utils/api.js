@@ -1,3 +1,8 @@
+// Admin: update order status/delivery date
+export const updateOrderStatus = async (orderId, { status, deliveryDate }) => {
+  const res = await axios.put(`${API_BASE}/admin/orders/${orderId}`, { status, deliveryDate }, { withCredentials: true });
+  return res.data;
+};
 
 import axios from 'axios';
 
@@ -125,7 +130,29 @@ export const updateWishlist = async (productId, action, userToken) => {
 // Orders
 export const fetchOrders = async () => {
   const res = await axios.get(`${API_BASE}/orders`, { withCredentials: true });
-  return res.data;
+  // Map backend order fields to frontend expected fields
+  const orders = (res.data.data || res.data || []).map((o) => ({
+    id: o._id || o.id,
+    date: o.createdAt || o.date,
+    deliveryDate: o.deliveryDate || null,
+    status: o.status || 'Processing',
+    address: o.address || '',
+    paymentInfo: o.paymentInfo || {},
+    user: o.user,
+    // Map items to products for frontend
+    products: (o.items || []).map((item) => ({
+      name: item.product?.name || item.name || '',
+      price: item.product?.price || item.price || 0,
+      image: item.product?.image || '',
+      quantity: item.quantity || 1,
+      id: item.product?._id || item.product?.id || item.product || item.id || '',
+    })),
+    // For admin, keep items as well
+    items: o.items,
+    total: o.total || 0,
+    _raw: o,
+  }));
+  return orders;
 };
 
 export const placeOrder = async (orderData) => {

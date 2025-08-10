@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchOrders } from "../utils/api";
+import { fetchOrders, updateOrderStatus } from "../utils/api";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -19,12 +19,14 @@ export default function AdminOrders() {
   }, []);
 
   const handleStatusChange = async (orderId, newStatus) => {
-    const updatedOrders = orders.map((o) =>
-      o.id === orderId ? { ...o, status: newStatus } : o
-    );
-    setOrders(updatedOrders);
-    // Optionally update backend here
-    // await updateOrderStatus(orderId, newStatus);
+    try {
+      await updateOrderStatus(orderId, { status: newStatus });
+      // Refetch orders to get latest status/delivery from backend
+      const fresh = await fetchOrders();
+      setOrders(Array.isArray(fresh) ? fresh : []);
+    } catch (err) {
+      // Optionally show error
+    }
   };
 
   const handlePaymentReturnStatusChange = (orderId, newStatus) => {
@@ -61,16 +63,16 @@ export default function AdminOrders() {
           <li className="text-gray-500">No orders found.</li>
         ) : (
           filteredOrders.map((o) => (
-            <li key={o.id} className="bg-gray-50 p-4 rounded flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-              <span className="font-medium text-gray-800">Order #{o.id}</span>
-              <span className="text-xs text-gray-500">Placed on: {o.date && !isNaN(Date.parse(o.date)) ? new Date(o.date).toLocaleDateString() : 'N/A'}</span>
-              <span className="text-xs text-blue-700 font-semibold">Total: ₹{(o.products || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0)}</span>
+            <li key={o._id} className="bg-gray-50 p-4 rounded flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+              <span className="font-medium text-gray-800">Order #{o._id}</span>
+              <span className="text-xs text-gray-500">Placed on: {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : 'N/A'}</span>
+              <span className="text-xs text-blue-700 font-semibold">Total: ₹{(o.items || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0)}</span>
               <span className={`px-2 py-1 rounded text-xs ${o.status === "Delivered" ? "bg-green-100 text-green-700" : o.status === "Cancelled" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>{o.status}</span>
-              <span className="text-sm text-gray-500">{o.userEmail}</span>
-              <span className="text-sm text-gray-500">{o.paymentMethod}</span>
+              <span className="text-sm text-gray-500">{o.user?.email || ''}</span>
+              <span className="text-sm text-gray-500">{o.paymentInfo?.method || ''}</span>
               <select
                 value={o.status}
-                onChange={e => handleStatusChange(o.id, e.target.value)}
+                onChange={e => handleStatusChange(o._id, e.target.value)}
                 className="px-2 py-1 rounded border text-xs"
               >
                 <option value="Processing">Processing</option>
@@ -80,12 +82,12 @@ export default function AdminOrders() {
                 <option value="Cancelled">Cancelled</option>
               </select>
               {/* Payment return status for cancelled online/UPI orders */}
-              {tab === 'cancelled' && (o.paymentMethod === 'UPI' || o.paymentMethod === 'Online') && (
+              {tab === 'cancelled' && (o.paymentInfo?.method === 'UPI' || o.paymentInfo?.method === 'Online') && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-blue-700">Payment:</span>
                   <select
                     value={o.paymentReturnStatus || 'Processing'}
-                    onChange={e => handlePaymentReturnStatusChange(o.id, e.target.value)}
+                    onChange={e => handlePaymentReturnStatusChange(o._id, e.target.value)}
                     className="px-2 py-1 rounded border text-xs"
                   >
                     <option value="Processing">Processing</option>

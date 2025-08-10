@@ -32,9 +32,13 @@ router.get('/users', adminAuth, async (req, res) => {
 
 // Get all orders
 router.get('/orders', adminAuth, async (req, res) => {
-  const orders = await Order.find().populate('user').populate('items.product');
-  res.json(orders);
+  const orders = await Order.find().populate('user', 'email name').populate('items.product', 'name price image');
+  res.json({ success: true, data: orders });
 });
+
+// Update order status and delivery date
+const orderController = require('../controllers/orderController');
+router.put('/orders/:id', adminAuth, orderController.updateOrderStatus);
 
 // Get all products
 router.get('/products', adminAuth, async (req, res) => {
