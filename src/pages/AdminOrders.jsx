@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from "react";
+import { fetchOrders } from "../utils/api";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [tab, setTab] = useState('active'); // 'active' or 'cancelled'
 
   useEffect(() => {
-    const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
-    setOrders(storedOrders);
+    async function loadOrders() {
+      try {
+        const res = await fetchOrders();
+        const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+        setOrders(data);
+      } catch (err) {
+        setOrders([]);
+      }
+    }
+    loadOrders();
   }, []);
 
-  const handleStatusChange = (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus) => {
     const updatedOrders = orders.map((o) =>
       o.id === orderId ? { ...o, status: newStatus } : o
     );
     setOrders(updatedOrders);
-    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    // Optionally update backend here
+    // await updateOrderStatus(orderId, newStatus);
   };
 
   const handlePaymentReturnStatusChange = (orderId, newStatus) => {
@@ -22,7 +32,7 @@ export default function AdminOrders() {
       o.id === orderId ? { ...o, paymentReturnStatus: newStatus } : o
     );
     setOrders(updatedOrders);
-    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    // Optionally update backend here
   };
 
   const filteredOrders = orders.filter(o => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import OrderRelatedCard from '../components/OrderRelatedCard';
 import { FaHeart, FaRegHeart, FaPuzzlePiece, FaPlus, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
-import { placeOrder } from '../utils/api';
+import { placeOrder, fetchWishlist } from '../utils/api';
 
 const ORDER_STEPS = [
   "Shipping Info",
@@ -38,26 +38,35 @@ const [orderProducts, setOrderProducts] = useState(() => {
   return [];
 });
 
-  // Always update wishlistProducts when modal is opened
-//  useEffect(() => {
-//   if (showWishlistModal) {
-//     try {
-//       const user = JSON.parse(localStorage.getItem("user"));
-//       const raw = localStorage.getItem(`wishlist_${user?.email}`);
-//       if (raw) {
-//         const parsed = JSON.parse(raw);
-//         if (Array.isArray(parsed)) setWishlistProducts(parsed);
-//         else setWishlistProducts([]);
-//       } else {
-//         setWishlistProducts([]);
-//       }
-//     } catch (e) {
-//       setWishlistProducts([]);
-//     }
-//   } else {
-//     setWishlistProducts([]);
-//   }
-// }, [showWishlistModal, wishlistModalKey]);
+  // Always update wishlistProducts when modal is opened (backend-driven)
+  useEffect(() => {
+    const fetchAndSetWishlist = async () => {
+      if (showWishlistModal) {
+        try {
+          // Try to get loggedInUser first, fallback to user
+          const user =
+            JSON.parse(localStorage.getItem("loggedInUser")) ||
+            JSON.parse(localStorage.getItem("user"));
+          if (!user || !(user._id || user.id || user.email)) {
+            setWishlistProducts([]);
+            return;
+          }
+          // Prefer _id or id, fallback to email
+          const userId = user._id || user.id || user.email;
+          const wishlistData = await fetchWishlist(userId);
+          if (Array.isArray(wishlistData)) setWishlistProducts(wishlistData);
+          else if (wishlistData && Array.isArray(wishlistData.data)) setWishlistProducts(wishlistData.data);
+          else setWishlistProducts([]);
+        } catch (e) {
+          setWishlistProducts([]);
+        }
+      } else {
+        setWishlistProducts([]);
+      }
+    };
+    fetchAndSetWishlist();
+    // eslint-disable-next-line
+  }, [showWishlistModal, wishlistModalKey]);
 //   // Order products state
 //   const [orderProducts, setOrderProducts] = useState(() => {
 //     if (products && Array.isArray(products)) {
@@ -96,7 +105,7 @@ useEffect(() => {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.email) {
+    if (!user || !(user.email || user._id || user.id)) {
       navigate("/ordernow");
       return;
     }

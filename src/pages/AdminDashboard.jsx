@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { fetchProducts, fetchAccessories } from "../utils/api";
 import { Bar } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -7,12 +9,13 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState([]); // FIXED: use [] instead of null
+  const [selectedOrder, setSelectedOrder] = useState([]);
   const [selectedReviews, setSelectedReviews] = useState([]);
   const [selectedFeedbacks, setSelectedFeedbacks] = useState([]);
-  const [editProduct, setEditProduct] = useState(null);
-  const [editForm, setEditForm] = useState({ name: "", price: "", image: "", stock: "" });
-  
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalFeedback, setTotalFeedback] = useState(0);
+  const navigate = useNavigate();
+
   // Filtering and pagination states
   const [productFilter, setProductFilter] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
@@ -24,25 +27,33 @@ export default function AdminDashboard() {
       try {
         const usersRes = await fetch('/api/users', { credentials: 'include' });
         const usersData = await usersRes.json();
-        setUsers(usersData);
-        if (!Array.isArray(usersData) || usersData.length === 0) {
-          alert('No users found or users data is not an array: ' + JSON.stringify(usersData));
-        }
+        setUsers(Array.isArray(usersData.data) ? usersData.data : []);
       } catch (err) {
         setUsers([]);
-        alert('Error fetching users: ' + err.message);
       }
-      // Fetch orders from backend
       try {
         const ordersRes = await fetch('/api/admin/orders', { credentials: 'include' });
         const ordersData = await ordersRes.json();
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
-        if (!Array.isArray(ordersData) || ordersData.length === 0) {
-          alert('No orders found or orders data is not an array: ' + JSON.stringify(ordersData));
-        }
+        setOrders(Array.isArray(ordersData.data) ? ordersData.data : []);
       } catch (err) {
         setOrders([]);
-        alert('Error fetching orders: ' + err.message);
+      }
+      try {
+        const [products, accessories] = await Promise.all([
+          fetchProducts(),
+          fetchAccessories()
+        ]);
+        setTotalProducts((Array.isArray(products) ? products.length : 0) + (Array.isArray(accessories) ? accessories.length : 0));
+      } catch (err) {
+        setTotalProducts(0);
+      }
+      try {
+        // Feedback: try to get from localStorage (adminReviews + contactForms), or set to 0 if not found
+        const adminReviews = JSON.parse(localStorage.getItem("adminReviews")) || [];
+        const contactForms = JSON.parse(localStorage.getItem("contactForms")) || [];
+        setTotalFeedback(adminReviews.length + contactForms.length);
+      } catch (err) {
+        setTotalFeedback(0);
       }
     }
     fetchData();
@@ -85,9 +96,6 @@ export default function AdminDashboard() {
   // Dashboard analytics summary
   const totalUsers = users.length;
   const totalOrders = orders.filter(o => o.status !== 'Cancelled').length;
-  // Fetch products and feedback from backend if needed
-  const totalProducts = 0; // Replace with backend count if available
-  const totalFeedback = 0; // Replace with backend count if available
 
   return (
     <main className="flex-1 p-6 transition-all duration-500 ease-in-out">
@@ -95,19 +103,19 @@ export default function AdminDashboard() {
 
       {/* Dashboard Analytics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white shadow rounded p-4 flex flex-col items-center">
+        <div className="bg-white shadow rounded p-4 flex flex-col items-center cursor-pointer hover:bg-blue-50 transition" onClick={() => navigate('/admin/customers')}>
           <span className="text-3xl font-bold text-blue-700">{totalUsers}</span>
           <span className="text-gray-500 mt-2">Users</span>
         </div>
-        <div className="bg-white shadow rounded p-4 flex flex-col items-center">
+        <div className="bg-white shadow rounded p-4 flex flex-col items-center cursor-pointer hover:bg-green-50 transition" onClick={() => navigate('/admin/orders')}>
           <span className="text-3xl font-bold text-green-700">{totalOrders}</span>
           <span className="text-gray-500 mt-2">Orders</span>
         </div>
-        <div className="bg-white shadow rounded p-4 flex flex-col items-center">
+        <div className="bg-white shadow rounded p-4 flex flex-col items-center cursor-pointer hover:bg-purple-50 transition" onClick={() => navigate('/admin/existing-products')}>
           <span className="text-3xl font-bold text-purple-700">{totalProducts}</span>
           <span className="text-gray-500 mt-2">Products</span>
         </div>
-        <div className="bg-white shadow rounded p-4 flex flex-col items-center">
+        <div className="bg-white shadow rounded p-4 flex flex-col items-center cursor-pointer hover:bg-pink-50 transition" onClick={() => navigate('/admin/feedback')}>
           <span className="text-3xl font-bold text-pink-700">{totalFeedback}</span>
           <span className="text-gray-500 mt-2">Feedback</span>
         </div>
@@ -320,15 +328,7 @@ export default function AdminDashboard() {
                         <div className="font-semibold">{p.name}</div>
                         <div className="text-green-700">₹{p.price}</div>
                         <div className="text-xs text-gray-500">Stock: {p.stock || "N/A"}</div>
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => setEditProduct(p)} className="bg-blue-500 text-white px-3 py-1 rounded">Edit</button>
-                          <button onClick={() => {
-                            const products = JSON.parse(localStorage.getItem("products")) || [];
-                            const updated = products.filter(prod => prod.id !== p.id);
-                            localStorage.setItem("products", JSON.stringify(updated));
-                            window.location.reload();
-                          }} className="bg-red-500 text-white px-3 py-1 rounded">Delete</button>
-                        </div>
+                        {/* Edit/Delete buttons removed in dashboard summary */}
                       </div>
                     </li>
                   ))
@@ -360,61 +360,7 @@ export default function AdminDashboard() {
           );
         })()}
         {/* Edit Product Modal */}
-        {editProduct && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-            <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-              <h3 className="text-xl font-bold mb-4 text-blue-700">Edit Product</h3>
-              <input
-                type="text"
-                placeholder="Name"
-                value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                className="border px-3 py-2 rounded w-full mb-2"
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={editForm.price}
-                onChange={e => setEditForm({ ...editForm, price: e.target.value })}
-                className="border px-3 py-2 rounded w-full mb-2"
-              />
-              <input
-                type="text"
-                placeholder="Image URL"
-                value={editForm.image}
-                onChange={e => setEditForm({ ...editForm, image: e.target.value })}
-                className="border px-3 py-2 rounded w-full mb-2"
-              />
-              <input
-                type="number"
-                placeholder="Stock"
-                value={editForm.stock}
-                onChange={e => setEditForm({ ...editForm, stock: e.target.value })}
-                className="border px-3 py-2 rounded w-full mb-4"
-              />
-              <div className="flex gap-4">
-                <button
-                  onClick={() => {
-                    const products = JSON.parse(localStorage.getItem("products")) || [];
-                    const updated = products.map(prod => prod.id === editProduct.id ? { ...editForm, id: prod.id } : prod);
-                    localStorage.setItem("products", JSON.stringify(updated));
-                    setEditProduct(null);
-                    window.location.reload();
-                  }}
-                  className="bg-green-600 text-white px-4 py-2 rounded"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditProduct(null)}
-                  className="bg-gray-400 text-white px-4 py-2 rounded"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+  {/* Edit Product Modal removed from dashboard summary */}
       </div>
     </main>
   );

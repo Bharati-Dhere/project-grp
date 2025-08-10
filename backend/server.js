@@ -37,6 +37,7 @@ app.use('/api/set-password', require('./routes/setPassword'));
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/feedback', require('./routes/feedback'));
 app.use('/api/otp', otpRoutes);
 
 app.use('/api/admin', adminRoutes);

@@ -1,10 +1,12 @@
-import React, { useState } from "react";
 
+import React, { useState } from "react";
+import { submitFeedback } from "../utils/feedbackApi";
 
 const Contact = () => {
   const [fields, setFields] = useState({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState("");
 
   const validate = () => {
     const errs = {};
@@ -23,16 +25,22 @@ const Contact = () => {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    setShowSuccess(true);
-    setFields({ name: "", email: "", message: "" });
-    setTimeout(() => setShowSuccess(false), 3000);
+    try {
+      await submitFeedback({ ...fields, isContactForm: true });
+      setShowSuccess(true);
+      setFields({ name: "", email: "", message: "" });
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      setShowError("Failed to send message. Please try again later.");
+      setTimeout(() => setShowError(""), 3000);
+    }
   };
 
   return (
@@ -98,28 +106,50 @@ const Contact = () => {
                 Send Message
               </button>
             </form>
-           {showSuccess && (
-  <div
-    style={{
-      position: "fixed",
-      top: "40px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      background: "#16a34a",
-      color: "white",
-      padding: "14px 36px",
-      borderRadius: "10px",
-      boxShadow: "0 2px 16px rgba(0,0,0,0.18)",
-      zIndex: 9999,
-      fontWeight: "bold",
-      fontSize: "1.1rem",
-      opacity: 1,
-      transition: "opacity 0.5s"
-    }}
-  >
-    Message sent successfully!
-  </div>
-)}
+            {showSuccess && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "40px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "#16a34a",
+                  color: "white",
+                  padding: "14px 36px",
+                  borderRadius: "10px",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.18)",
+                  zIndex: 9999,
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  opacity: 1,
+                  transition: "opacity 0.5s"
+                }}
+              >
+                Message sent successfully!
+              </div>
+            )}
+            {showError && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "40px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "#dc2626",
+                  color: "white",
+                  padding: "14px 36px",
+                  borderRadius: "10px",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.18)",
+                  zIndex: 9999,
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  opacity: 1,
+                  transition: "opacity 0.5s"
+                }}
+              >
+                {showError}
+              </div>
+            )}
           </div>
 
           {/* Right: Google Map */}

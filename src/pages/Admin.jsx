@@ -27,7 +27,8 @@ const Admin = () => {
         const res = await fetch('/api/users', { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch users');
         const data = await res.json();
-        setSignupUsers(Array.isArray(data) ? data : []);
+        // Use .data property from backend response
+        setSignupUsers(Array.isArray(data.data) ? data.data : []);
       } catch (err) {
         setSignupUsers([]);
       } finally {

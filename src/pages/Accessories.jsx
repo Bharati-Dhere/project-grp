@@ -210,7 +210,6 @@ const ACCESSORY_BRANDS = accessories.length
                   onRemoveFromWishlist={() => handleRemoveFromWishlist(accessory._id || accessory.id)}
                   showActions={true}
                   detailsPath="accessories"
-                  onClick={() => handleCardClick(accessory._id || accessory.id)}
                   showBadges={true}
                 />
               );

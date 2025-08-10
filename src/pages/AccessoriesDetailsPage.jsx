@@ -379,14 +379,18 @@ export default function AccessoriesDetailsPage() {
       <div className="mt-10">
         <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
-          {related.map((item) => (
-            <ProductCard
-              key={item._id || item.id}
-              product={item}
-              detailsPath={item.category ? (item.category.toLowerCase().includes('accessor') ? 'accessoriesdetailspage' : 'productdetails') : 'productdetails'}
-              showActions={!!user}
-            />
-          ))}
+          {related.map((item) => {
+            const cat = item.category ? item.category.toLowerCase() : '';
+            const isAccessory = cat.includes('accessory') || cat.includes('accessories');
+            return (
+              <ProductCard
+                key={item._id || item.id}
+                product={item}
+                detailsPath={isAccessory ? 'accessories' : 'productdetails'}
+                showActions={!!user}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

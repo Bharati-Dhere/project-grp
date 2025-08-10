@@ -13,14 +13,14 @@ export default function AdminCustomers() {
       try {
         // Use relative API paths for proxy setup
         const usersRes = await axios.get("/api/users", { withCredentials: true });
-        setUsers(usersRes.data);
+        setUsers(Array.isArray(usersRes.data.data) ? usersRes.data.data : []);
         const ordersRes = await axios.get("/api/admin/orders", { withCredentials: true });
-        setOrders(ordersRes.data);
+        setOrders(Array.isArray(ordersRes.data.data) ? ordersRes.data.data : []);
       } catch (err) {
-  setUsers([]);
-  setOrders([]);
-  // Debug: show error in UI
-  window.alert("Error fetching users or orders: " + (err.response?.data?.message || err.message));
+        setUsers([]);
+        setOrders([]);
+        // Debug: show error in UI
+        window.alert("Error fetching users or orders: " + (err.response?.data?.message || err.message));
       }
     }
     fetchData();
@@ -41,9 +41,7 @@ export default function AdminCustomers() {
           <li className="text-gray-500">No registered users found.</li>
         ) : (
           <>
-            <li className="text-xs text-gray-400">Raw users: <pre>{JSON.stringify(users, null, 2)}</pre></li>
-            {/* Debug: show user count */}
-            <li className="text-xs text-red-500">User count: {users.length}</li>
+            <li className="text-base font-semibold text-blue-700 mb-2">Total Users: {users.length}</li>
             {users.map((u) => (
               <li key={u._id} className="bg-gray-50 p-4 rounded flex justify-between items-center cursor-pointer hover:bg-blue-50" onClick={() => setSelectedUser(u)}>
                 <span className="font-semibold text-blue-800">{u.name}</span>
@@ -62,7 +60,7 @@ export default function AdminCustomers() {
             <p><strong>Password Status:</strong> {selectedUser.password === "clerk" ? "Password not set" : "Password set"}</p>
             {/* Address, Gender, Notifications may not exist in schema */}
           </div>
-          <h3 className="font-semibold mt-4 mb-2">Order History</h3>
+          <h3 className="font-semibold mt-4 mb-2">Order History <span className='text-xs text-blue-600'>(Total: {orders.filter(o => o.user && o.user.email === selectedUser.email).length})</span></h3>
           <ul className="space-y-1 mb-2">
             {orders.filter(o => o.user && o.user.email === selectedUser.email).length === 0 ? (
               <li className="text-gray-500">No orders.</li>

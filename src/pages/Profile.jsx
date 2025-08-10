@@ -43,10 +43,11 @@ function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onCl
 
 }
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user, login, logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
+  const [authModalActive, setAuthModalActive] = useState(false); // prevent infinite modal
   const [allUsers, setAllUsers] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
@@ -112,24 +113,34 @@ export default function Profile() {
 
   useEffect(() => {
     async function loadProfileAndOrders() {
-      if (!user) {
+      if (!user && !authModalActive) {
         setShowAuthModal(true);
+        setAuthModalActive(true);
         return;
       }
+      if (!user) return;
       try {
-        const profileData = await fetchUserProfile(user._id);
-        setProfile(profileData);
-        setForm(profileData);
-        setAvatar(profileData?.avatar || null);
-        setNotifications(profileData?.notifications || false);
+        const profileRes = await fetchUserProfile(user._id || user.id);
+        // Support both { data: { ...user } } and { ...user }
+        const userData = profileRes.data || profileRes;
+        setProfile(userData);
+        // Flatten profile fields for form
+        setForm({
+          ...userData.profile,
+          email: userData.email,
+          phone: userData.profile?.phone || userData.phone || ""
+        });
+        setAvatar(userData.profile?.avatar || null);
+        setNotifications(userData.profile?.notifications || false);
         const ordersData = await fetchOrders();
-        setOrders(ordersData);
+        setOrders(ordersData.data || ordersData);
       } catch (err) {
         setShowAuthModal(true);
+        setAuthModalActive(true);
       }
     }
     loadProfileAndOrders();
-  }, [user, centerTab]);
+  }, [user, centerTab, authModalActive]);
 
 
   //Track order
@@ -205,11 +216,10 @@ export default function Profile() {
     setNotifications((prev) => !prev);
   };
 
-  // Validation (only name and email required in edit mode)
+  // Validation (only name required in edit mode; email is not editable)
   const validateForm = () => {
     const newErrors = {};
     if (!form.name || form.name.length < 2) newErrors.name = "Name is required.";
-    if (!form.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) newErrors.email = "Valid email required.";
     if (form.pincode && !/^\d{6}$/.test(form.pincode)) newErrors.pincode = "Pincode must be 6 digits.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -221,8 +231,20 @@ export default function Profile() {
       return;
     }
     try {
-      const updated = await updateUserProfile(user._id, { ...form, avatar, notifications });
-      setProfile(updated);
+      // Only send editable fields in profile
+      const profileUpdate = {
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+        gender: form.gender,
+        avatar: avatar,
+        notifications: notifications
+      };
+  const updated = await updateUserProfile(user._id || user.id, profileUpdate);
+      setProfile(updated.data || updated);
       setEditMode(false);
       toast.success("Profile updated");
     } catch (err) {
@@ -269,12 +291,27 @@ export default function Profile() {
     toast.success("Delivery date updated.");
   }
 
-  if (!user) {
+  // Don't show anything while modal is open and user is not logged in
+  if (!user && showAuthModal) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500">Please log in to view your profile.</p>
-      </div>
+      <AuthModal
+        onClose={() => {
+          setShowAuthModal(false);
+          setAuthModalActive(false);
+          setTimeout(() => {
+            if (window.location && window.location.reload && typeof login === 'function') {
+              if (localStorage.getItem('user')) window.location.reload();
+            }
+          }, 200);
+        }}
+        setUser={login}
+      />
     );
+  }
+
+  // Prevent rendering if user is still null (hydrating)
+  if (!user) {
+    return null;
   }
 
   // (Removed handleClearAllData function)
@@ -381,9 +418,9 @@ export default function Profile() {
                 </div>
                 <input type="text" name="name" value={form.name || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Name" />
                 {errors.name && <p className="text-red-500 text-xs mb-1">{errors.name}</p>}
-                <input type="email" name="email" value={form.email || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Email (read-only)" />
+                <input type="email" name="email" value={user.email || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Email (read-only)" />
                 {errors.email && <p className="text-red-500 text-xs mb-1">{errors.email}</p>}
-                <input type="text" name="phone" value={form.phone || form.mobile || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Mobile (read-only)" />
+                <input type="text" name="phone" value={form.phone || form.mobile || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Mobile" />
                 <input type="text" name="address" value={form.address || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Address" />
                 <input type="text" name="city" value={form.city || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="City" />
                 <input type="text" name="state" value={form.state || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="State" />
@@ -415,25 +452,25 @@ export default function Profile() {
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold mb-1">{user.name}</h2>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">Email:</span> {user.email}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">Phone:</span> {user.phone}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">Address:</span> {user.address}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">City:</span> {user.city}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">State:</span> {user.state}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">Pincode:</span> {user.pincode}</p>
-                <p className="text-gray-600 mb-1"><span className="font-semibold">Gender:</span> {user.gender}</p>
+                <h2 className="text-2xl font-bold mb-1">{user?.name || ''}</h2>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Email:</span> {user?.email || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Phone:</span> {user?.phone || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Address:</span> {user?.address || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">City:</span> {user?.city || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">State:</span> {user?.state || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Pincode:</span> {user?.pincode || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Gender:</span> {user?.gender || ''}</p>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm">Notifications:</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={user.notifications}
+                      checked={user?.notifications || false}
                       readOnly
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 transition-all duration-200 ${user.notifications ? 'bg-green-400' : ''}`}></div>
-                    <span className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 ${user.notifications ? 'translate-x-5' : ''}`}></span>
+                    <div className={`w-11 h-6 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 transition-all duration-200 ${user?.notifications ? 'bg-green-400' : ''}`}></div>
+                    <span className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 ${user?.notifications ? 'translate-x-5' : ''}`}></span>
                   </label>
                 </div>
                 <button onClick={handleEdit} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-2">Edit Profile</button>

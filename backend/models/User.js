@@ -13,6 +13,17 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product'
   }],
+  profile: {
+    name: { type: String },
+    phone: { type: String },
+    address: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String },
+    gender: { type: String },
+    avatar: { type: String },
+    notifications: { type: Boolean, default: false }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

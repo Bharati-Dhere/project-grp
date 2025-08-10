@@ -125,7 +125,15 @@ export default function ProductCard({
     }
     // Use detailsPath prop to determine navigation
     const productId = product._id || product.id;
-    navigate(`/${detailsPath}/${productId}`);
+    // Route to correct details page for product or accessory
+    if (detailsPath === 'accessories') {
+      navigate(`/accessories/${productId}`);
+    } else if (detailsPath === 'productdetails') {
+      navigate(`/productdetails/${productId}`);
+    } else {
+      // fallback: try productdetails
+      navigate(`/productdetails/${productId}`);
+    }
   };
 
   return (
@@ -180,7 +188,7 @@ export default function ProductCard({
         <div className="relative bg-gray-100 m-4 rounded-xl p-3 flex justify-center items-center h-52 overflow-hidden transition-all duration-300 ease-in-out">
           <img
             alt={product.name}
-            src={product.image}
+            src={product.image && product.image !== '' ? product.image : defaultAvatar}
             className="w-auto h-full object-contain transition-all duration-500 ease-in-out group-hover:scale-110 rounded-xl overflow-hidden"
             onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
           />

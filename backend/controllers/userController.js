@@ -29,7 +29,19 @@ module.exports = {
   },
   updateUser: async (req, res) => {
     try {
-      const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password');
+      // Only allow updating profile fields, not email/role/password directly
+      const profileFields = [
+        'name', 'phone', 'address', 'city', 'state', 'pincode', 'gender', 'avatar', 'notifications'
+      ];
+      const update = {};
+      for (const field of profileFields) {
+        if (req.body[field] !== undefined) {
+          update[`profile.${field}`] = req.body[field];
+        }
+      }
+      // Optionally allow updating phone at root for legacy support
+      if (req.body.phone !== undefined) update['phone'] = req.body.phone;
+      const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
       if (!user) return res.status(404).json({ success: false, message: 'User not found' });
       res.json({ success: true, message: 'User updated', data: user });
     } catch (err) {
