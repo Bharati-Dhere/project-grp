@@ -99,6 +99,8 @@ function ProductDetails() {
       setRatingCount(data.ratingCount || 0);
       setAvgRating(data.avgRating || null);
       setReviews(data.reviews || []);
+      // Dispatch event to auto-refresh product/admin lists
+      window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
       alert("Error submitting review");
     }
@@ -215,7 +217,14 @@ function ProductDetails() {
             <span className="text-green-600 font-bold text-2xl">₹{product.price}</span>
             <span className="text-yellow-500 text-lg flex items-center">
               <FaStar className="mr-1" />
-              {avgRating ? avgRating : '0'} / 5
+              {Number.isFinite(Number(avgRating))
+                ? Number(avgRating).toFixed(1)
+                : (Number.isFinite(Number(product.avgRating))
+                  ? Number(product.avgRating).toFixed(1)
+                  : (product.rating?.toFixed
+                    ? product.rating.toFixed(1)
+                    : (Number.isFinite(Number(product.rating)) ? Number(product.rating).toFixed(1) : '0')))}
+              / 5
             </span>
             {product.offer && (
               <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-semibold shadow-sm animate-pulse">{product.offer}</span>

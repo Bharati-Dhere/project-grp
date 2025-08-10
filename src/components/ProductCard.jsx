@@ -221,9 +221,11 @@ export default function ProductCard({
           <div className="flex justify-between items-center mb-1">
             <p className="text-sm text-gray-600 font-medium">{product.brand}</p>
             <span className="text-sm text-yellow-600 font-semibold">
-              {product.rating?.toFixed
-                ? product.rating.toFixed(1)
-                : product.rating}
+              {Number.isFinite(Number(product.avgRating))
+                ? Number(product.avgRating).toFixed(1)
+                : (product.rating?.toFixed
+                  ? product.rating.toFixed(1)
+                  : (Number.isFinite(Number(product.rating)) ? Number(product.rating).toFixed(1) : '0'))}
               /5
             </span>
           </div>

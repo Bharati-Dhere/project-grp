@@ -114,14 +114,14 @@ useEffect(() => {
   const getEstimatedDeliveryDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 5);
-    return d.toLocaleDateString();
+    return d.toISOString(); // Store as ISO string for backend/admin editing
   };
   const [deliveryDate, setDeliveryDate] = useState(getEstimatedDeliveryDate());
 
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("loggedInUser")) || JSON.parse(localStorage.getItem("user"));
+      // ...existing user logic...
       let newOrder = null;
       if (orderProducts && Array.isArray(orderProducts)) {
         const items = orderProducts.map(p => ({
@@ -134,7 +134,8 @@ useEffect(() => {
           items,
           total,
           address: shipping.address,
-          paymentInfo: payment
+          paymentInfo: payment,
+          deliveryDate // Store the default delivery date in the order
         };
       }
       if (newOrder) {
@@ -453,7 +454,7 @@ useEffect(() => {
           {/* Delivery Date Info */}
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 text-blue-800 text-center">
             <span className="font-semibold">Estimated Delivery Date: </span>
-            <span>{deliveryDate}</span>
+            <span>{new Date(deliveryDate).toLocaleDateString()}</span>
           </div>
           <div className="flex justify-between gap-2 mt-4">
             <button onClick={handlePrev} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition">Back</button>

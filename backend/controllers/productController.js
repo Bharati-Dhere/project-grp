@@ -3,7 +3,19 @@ const Product = require('../models/Product');
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
-    res.json({ success: true, message: 'Products fetched', data: products });
+    const productsWithRatings = products.map(product => {
+      const reviews = product.reviews || [];
+      const ratings = product.ratings || [];
+      const allRatings = reviews.length > 0 ? reviews : ratings;
+      const ratingCount = allRatings.length;
+      const avgRating = ratingCount ? (allRatings.reduce((sum, r) => sum + r.value, 0) / ratingCount) : null;
+      return {
+        ...product.toObject(),
+        avgRating: avgRating !== null ? Number(avgRating.toFixed(2)) : null,
+        ratingCount,
+      };
+    });
+    res.json({ success: true, message: 'Products fetched', data: productsWithRatings });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', data: null });
   }

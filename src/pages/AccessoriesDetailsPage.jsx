@@ -94,6 +94,8 @@ export default function AccessoriesDetailsPage() {
       setRatingCount(data.ratingCount || 0);
       setAvgRating(data.avgRating || null);
       setReviews(data.reviews || []);
+      // Dispatch event to trigger refresh in other components
+      window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
       alert("Error submitting review");
     }
@@ -220,7 +222,14 @@ export default function AccessoriesDetailsPage() {
             <span className="text-green-600 font-bold text-2xl">₹{accessory.price}</span>
             <span className="text-yellow-500 text-lg flex items-center">
               <FaStar className="mr-1" />
-              {avgRating ? avgRating : '0'} / 5
+              {Number.isFinite(Number(avgRating))
+                ? Number(avgRating).toFixed(1)
+                : (Number.isFinite(Number(accessory.avgRating))
+                  ? Number(accessory.avgRating).toFixed(1)
+                  : (accessory.rating?.toFixed
+                    ? accessory.rating.toFixed(1)
+                    : (Number.isFinite(Number(accessory.rating)) ? Number(accessory.rating).toFixed(1) : '0')))}
+              / 5
             </span>
             {accessory.offer && (
               <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-semibold shadow-sm animate-pulse">{accessory.offer}</span>

@@ -30,9 +30,15 @@ export default function Accessories() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAccessories().then((data) => {
-      setAccessories(Array.isArray(data) ? data : []);
-    });
+    const fetchAll = () => {
+      fetchAccessories().then((data) => {
+        setAccessories(Array.isArray(data) ? data : []);
+      });
+    };
+    fetchAll();
+    // Listen for review submissions to auto-refresh accessories list
+    window.addEventListener('reviewSubmitted', fetchAll);
+    return () => window.removeEventListener('reviewSubmitted', fetchAll);
   }, []);
 
   useEffect(() => {
@@ -49,14 +55,33 @@ export default function Accessories() {
     if (filters.bestSeller && filters.bestSeller.length)
       result = result.filter(a => a.isBestSeller === true || a.isBestSeller === 'Yes');
     if (filters.rating)
-      result = result.filter(a => a.rating >= filters.rating);
+      result = result.filter(a => {
+        const rating = (a.avgRating !== undefined && a.avgRating !== null)
+          ? Number(a.avgRating)
+          : (a.rating !== undefined && a.rating !== null)
+            ? Number(a.rating)
+            : 0;
+        return rating >= filters.rating;
+      });
     if (filters.price)
       result = result.filter(a => a.price >= filters.price.min && a.price <= filters.price.max);
     if (filters.inStock)
       result = result.filter(a => a.inStock !== false);
     if (sortOption === "priceLowToHigh") result.sort((a, b) => a.price - b.price);
     else if (sortOption === "priceHighToLow") result.sort((a, b) => b.price - a.price);
-    else if (sortOption === "rating") result.sort((a, b) => b.rating - a.rating);
+    else if (sortOption === "rating") result.sort((a, b) => {
+      const ratingA = (a.avgRating !== undefined && a.avgRating !== null)
+        ? Number(a.avgRating)
+        : (a.rating !== undefined && a.rating !== null)
+          ? Number(a.rating)
+          : 0;
+      const ratingB = (b.avgRating !== undefined && b.avgRating !== null)
+        ? Number(b.avgRating)
+        : (b.rating !== undefined && b.rating !== null)
+          ? Number(b.rating)
+          : 0;
+      return ratingB - ratingA;
+    });
     setFilteredAccessories(result);
   }, [filters, sortOption, accessories]);
 

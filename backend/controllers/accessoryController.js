@@ -3,7 +3,19 @@ const Accessory = require('../models/Accessory');
 exports.getAllAccessories = async (req, res) => {
   try {
     const accessories = await Accessory.find();
-    res.json({ success: true, message: 'Accessories fetched', data: accessories });
+    const accessoriesWithRatings = accessories.map(accessory => {
+      const reviews = accessory.reviews || [];
+      const ratings = accessory.ratings || [];
+      const allRatings = reviews.length > 0 ? reviews : ratings;
+      const ratingCount = allRatings.length;
+      const avgRating = ratingCount ? (allRatings.reduce((sum, r) => sum + r.value, 0) / ratingCount) : null;
+      return {
+        ...accessory.toObject(),
+        avgRating: avgRating !== null ? Number(avgRating.toFixed(2)) : null,
+        ratingCount,
+      };
+    });
+    res.json({ success: true, message: 'Accessories fetched', data: accessoriesWithRatings });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', data: null });
   }

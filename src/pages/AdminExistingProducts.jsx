@@ -56,23 +56,29 @@ const AdminExistingProducts = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (type === "Product") {
-      fetchProducts().then((data) => {
-        const products = Array.isArray(data) ? data : [];
-        setItems(products);
-        setProductCount(products.length);
-        setCategories(FIXED_PRODUCT_CATEGORIES);
-        setBrands(FIXED_PRODUCT_BRANDS);
-      });
-    } else {
-      fetchAccessories().then((data) => {
-        const accessories = Array.isArray(data) ? data : [];
-        setItems(accessories);
-        setAccessoryCount(accessories.length);
-        setCategories(FIXED_ACCESSORY_CATEGORIES);
-        setBrands(FIXED_ACCESSORY_BRANDS);
-      });
-    }
+    const fetchAll = () => {
+      if (type === "Product") {
+        fetchProducts().then((data) => {
+          const products = Array.isArray(data) ? data : [];
+          setItems(products);
+          setProductCount(products.length);
+          setCategories(FIXED_PRODUCT_CATEGORIES);
+          setBrands(FIXED_PRODUCT_BRANDS);
+        });
+      } else {
+        fetchAccessories().then((data) => {
+          const accessories = Array.isArray(data) ? data : [];
+          setItems(accessories);
+          setAccessoryCount(accessories.length);
+          setCategories(FIXED_ACCESSORY_CATEGORIES);
+          setBrands(FIXED_ACCESSORY_BRANDS);
+        });
+      }
+    };
+    fetchAll();
+    // Listen for review submissions to auto-refresh admin list
+    window.addEventListener('reviewSubmitted', fetchAll);
+    return () => window.removeEventListener('reviewSubmitted', fetchAll);
   }, [type]);
 
   const handleEdit = (id) => {
@@ -151,7 +157,7 @@ const AdminExistingProducts = () => {
                 <td className="p-2">{p.brand || "-"}</td>
                 <td className="p-2">{p.color || "-"}</td>
                 <td className="p-2">₹{p.price}</td>
-                <td className="p-2">{p.rating || "-"}</td>
+                <td className="p-2">{(p.avgRating !== undefined && p.avgRating !== null) ? p.avgRating.toFixed(1) : (p.rating ? (typeof p.rating === 'number' ? p.rating.toFixed(1) : p.rating) : "-")}</td>
                 <td className="p-2">{p.isOffer ? "Offer" : "-"}</td>
                 <td className="p-2">{p.isBestSeller ? "Yes" : "No"}</td>
                 <td className="p-2">{p.inStock ? "In Stock" : "Out of Stock"}</td>

@@ -65,7 +65,12 @@ const Products = () => {
     // Listen for updates from other components
     const handler = () => fetchProductsAndUserData();
     window.addEventListener('cartWishlistUpdated', handler);
-    return () => window.removeEventListener('cartWishlistUpdated', handler);
+    // Listen for review submissions to auto-refresh products
+    window.addEventListener('reviewSubmitted', handler);
+    return () => {
+      window.removeEventListener('cartWishlistUpdated', handler);
+      window.removeEventListener('reviewSubmitted', handler);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -75,7 +80,14 @@ const Products = () => {
     if (filters.brand.length)
       result = result.filter(p => filters.brand.includes(p.brand));
     if (filters.rating)
-      result = result.filter(p => p.rating >= filters.rating);
+      result = result.filter(p => {
+        const rating = (p.avgRating !== undefined && p.avgRating !== null)
+          ? Number(p.avgRating)
+          : (p.rating !== undefined && p.rating !== null)
+            ? Number(p.rating)
+            : 0;
+        return rating >= filters.rating;
+      });
     if (filters.price)
       result = result.filter(p => p.price >= filters.price.min && p.price <= filters.price.max);
     if (filters.offer.length)
@@ -90,7 +102,19 @@ const Products = () => {
       result = result.filter(p => p.inStock !== false);
     if (sortOption === "priceLowToHigh") result.sort((a, b) => a.price - b.price);
     else if (sortOption === "priceHighToLow") result.sort((a, b) => b.price - a.price);
-    else if (sortOption === "rating") result.sort((a, b) => b.rating - a.rating);
+    else if (sortOption === "rating") result.sort((a, b) => {
+      const ratingA = (a.avgRating !== undefined && a.avgRating !== null)
+        ? Number(a.avgRating)
+        : (a.rating !== undefined && a.rating !== null)
+          ? Number(a.rating)
+          : 0;
+      const ratingB = (b.avgRating !== undefined && b.avgRating !== null)
+        ? Number(b.avgRating)
+        : (b.rating !== undefined && b.rating !== null)
+          ? Number(b.rating)
+          : 0;
+      return ratingB - ratingA;
+    });
     setFilteredProducts(result);
   }, [filters, sortOption, products]);
 
