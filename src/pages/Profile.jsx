@@ -6,11 +6,11 @@ import { fetchUserProfile, updateUserProfile, fetchOrders } from '../utils/api';
 import defaultAvatar from '../assets/default-avatar.png';
 import AuthModal from '../components/AuthModal';
 
-function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onClick }) {
+function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onClick, onViewDetails }) {
   // Calculate total price for all products in the order
   const totalPrice = (order.products || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0);
   return (
-    <li className="flex flex-col md:flex-row justify-between items-start md:items-center group hover:bg-blue-50 rounded transition-all duration-200 p-2 border border-blue-100 shadow-sm cursor-pointer" onClick={onClick}>
+    <li className="flex flex-col md:flex-row justify-between items-start md:items-center group hover:bg-blue-50 rounded transition-all duration-200 p-2 border border-blue-100 shadow-sm cursor-pointer">
       <div className="flex flex-col flex-1">
         <span className="flex items-center gap-2 font-semibold text-blue-900">
           <span>Order #{order.id}</span>
@@ -32,6 +32,7 @@ function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onCl
           </ul>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
+          <button onClick={() => onViewDetails(order)} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200">View Details</button>
           {onTrack && <button onClick={onTrack} className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center gap-1" title="Track this order">Track</button>}
           {onCancel && order.status !== 'Cancelled' && <button onClick={onCancel} className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-700 flex items-center gap-1" title="Cancel this order">Cancel</button>}
           {onReorder && order.status === 'Cancelled' && <button onClick={onReorder} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Reorder</button>}
@@ -40,7 +41,6 @@ function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onCl
       </div>
     </li>
   );
-
 }
 export default function Profile() {
   const { user, login, logout } = useAuth();
@@ -59,7 +59,7 @@ export default function Profile() {
   const [trackOrderId, setTrackOrderId] = useState("");
   const [trackStatus, setTrackStatus] = useState("");
   const [adminOrderModal, setAdminOrderModal] = useState(null);
-  
+  const [detailsOrder, setDetailsOrder] = useState(null);
   const fileInputRef = useRef();
   const navigate = useNavigate();
 
@@ -151,16 +151,21 @@ export default function Profile() {
     const order = orders.find(o => String(o.id) === String(idToTrack));
     setTrackStatus(order ? order.status : "Order not found");
   };
-  // Cancel order handler (backend only)
+  // Cancel order handler (calls backend and refreshes orders)
   const handleCancelOrder = async (orderId) => {
     try {
-      // Call backend API to cancel order (implement in your backend and api.js)
-      // await cancelOrder(orderId);
-      // For now, just update local state for UI
-      setOrders(orders => orders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' } : o));
+      // Call backend API to cancel order
+      await import('../utils/api').then(api => api.cancelOrder(orderId));
+      // Refresh orders from backend so admin sees update
+      const ordersData = await fetchOrders();
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
       toast.info('Order cancelled.');
     } catch (err) {
-      toast.error('Failed to cancel order.');
+      let msg = 'Failed to cancel order.';
+      if (err.response && err.response.data && err.response.data.message) {
+        msg = err.response.data.message;
+      }
+      toast.error(msg);
     }
   };
 
@@ -491,7 +496,7 @@ export default function Profile() {
             order={o}
             onTrack={() => { setCenterTab('track'); setTimeout(() => handleTrackOrder(o.id), 0); }}
             onCancel={() => handleCancelOrder(o.id)}
-            onClick={user?.role === 'admin' ? (e) => { e.stopPropagation(); handleAdminOrderClick(o); } : undefined}
+            onViewDetails={setDetailsOrder}
           />
         ))}
               </ul>
@@ -512,7 +517,7 @@ export default function Profile() {
             onTrack={() => { setCenterTab('track'); setTimeout(() => handleTrackOrder(o.id), 0); }}
             onReorder={() => handleReorder(o)}
             onUserCancel={() => handleUserCancelOrder(o)}
-            onClick={user?.role === 'admin' ? (e) => { e.stopPropagation(); handleAdminOrderClick(o); } : undefined}
+            onViewDetails={setDetailsOrder}
           />
         ))}
               </ul>
@@ -590,9 +595,34 @@ export default function Profile() {
             })()}
           </div>
         )}
-      {/* Admin Order Details Modal */}
-      {user?.role === 'admin' && adminOrderModal && (
-        <AdminOrderDetailsModal order={adminOrderModal} onClose={() => setAdminOrderModal(null)} />
+      {/* Order Details Modal (user side) */}
+      {detailsOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-red-600 text-xl" onClick={() => setDetailsOrder(null)}>&times;</button>
+            <h2 className="text-xl font-bold mb-2 text-blue-700">Order #{detailsOrder.id} Details</h2>
+            <div className="mb-2"><span className="font-semibold">Placed on:</span> {detailsOrder.date ? new Date(detailsOrder.date).toLocaleDateString() : 'N/A'}</div>
+            <div className="mb-2"><span className="font-semibold">Delivery Date:</span> {detailsOrder.deliveryDate ? new Date(detailsOrder.deliveryDate).toLocaleDateString() : 'Not set'}</div>
+            <div className="mb-2"><span className="font-semibold">Status:</span> {detailsOrder.status}</div>
+            <div className="mb-2"><span className="font-semibold">Address:</span> {detailsOrder.address || 'N/A'}</div>
+            <div className="mb-2"><span className="font-semibold">Payment:</span> {detailsOrder.paymentInfo?.method || 'N/A'}</div>
+            <div className="mb-2"><span className="font-semibold">Total Price:</span> ₹{(detailsOrder.products || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0)}</div>
+            <div className="mb-2"><span className="font-semibold">Products:</span>
+              <ul className="ml-4 list-disc">
+                {(detailsOrder.products || []).map((prod, idx) => {
+                  // Try to get category and brand from both prod and prod.product
+                  const category = prod.category || (prod.product && prod.product.category) || '';
+                  const brand = prod.brand || (prod.product && prod.product.brand) || '';
+                  return (
+                    <li key={idx} className="mb-1">
+                      <span className="font-semibold text-blue-800">{prod.name}</span> - Qty: {prod.quantity} - Price: ₹{prod.price} - Category: {category} - Brand: {brand}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
       )}
 
       </main>

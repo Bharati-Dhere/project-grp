@@ -18,8 +18,12 @@ function auth(req, res, next) {
 
 const orderController = require('../controllers/orderController');
 
+
 // Get orders
 router.get('/', auth, orderController.getAllOrders);
+
+// Cancel order (user)
+router.patch('/:id/cancel', auth, orderController.cancelOrder);
 
 // Place order
 router.post('/', auth, orderController.placeOrder);

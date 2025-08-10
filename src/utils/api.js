@@ -1,10 +1,20 @@
+import axios from 'axios';
+
+// Cancel order (user)
+export const cancelOrder = async (orderId) => {
+  // PATCH to /orders/:id/cancel (to be implemented in backend)
+  const res = await axios.patch(`${API_BASE}/orders/${orderId}/cancel`, {}, { withCredentials: true });
+  return res.data;
+};
+
+
 // Admin: update order status/delivery date
 export const updateOrderStatus = async (orderId, { status, deliveryDate }) => {
   const res = await axios.put(`${API_BASE}/admin/orders/${orderId}`, { status, deliveryDate }, { withCredentials: true });
   return res.data;
 };
 
-import axios from 'axios';
+
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -131,32 +141,41 @@ export const updateWishlist = async (productId, action, userToken) => {
 export const fetchOrders = async () => {
   const res = await axios.get(`${API_BASE}/orders`, { withCredentials: true });
   // Map backend order fields to frontend expected fields
-  const orders = (res.data.data || res.data || []).map((o) => ({
-    id: o._id || o.id,
-    date: o.createdAt || o.date,
-    deliveryDate: o.deliveryDate || null,
-    status: o.status || 'Processing',
-    address: o.address || '',
-    paymentInfo: o.paymentInfo || {},
-    user: o.user,
-    // Map items to products for frontend
-    products: (o.items || []).map((item) => ({
-      name: item.product?.name || item.name || '',
-      price: item.product?.price || item.price || 0,
-      image: item.product?.image || '',
-      quantity: item.quantity || 1,
-      id: item.product?._id || item.product?.id || item.product || item.id || '',
-    })),
-    // For admin, keep items as well
-    items: o.items,
-    total: o.total || 0,
-    _raw: o,
-  }));
+  const orders = (res.data.data || res.data || []).map((o) => {
+    const id = o._id || o.id;
+    return {
+      id,
+      _id: o._id, // always keep _id for admin
+      date: o.createdAt || o.date,
+      deliveryDate: o.deliveryDate || null,
+      status: o.status || 'Processing',
+      address: o.address || '',
+      paymentInfo: o.paymentInfo || {},
+      user: o.user,
+      // Map items to products for frontend
+      products: (o.items || []).map((item) => ({
+        name: item.product?.name || item.name || '',
+        price: item.product?.price || item.price || 0,
+        image: item.product?.image || '',
+        quantity: item.quantity || 1,
+        id: item.product?._id || item.product?.id || item.product || item.id || '',
+        category: item.product?.category || '',
+        brand: item.product?.brand || '',
+      })),
+      // For admin, keep items as well
+      items: o.items,
+      total: o.total || 0,
+      _raw: o,
+    };
+  });
   return orders;
 };
 
+// Never send user field from frontend, backend will use authenticated user
 export const placeOrder = async (orderData) => {
-  const res = await axios.post(`${API_BASE}/orders`, orderData, { withCredentials: true });
+  const cleanOrder = { ...orderData };
+  if (cleanOrder.user) delete cleanOrder.user;
+  const res = await axios.post(`${API_BASE}/orders`, cleanOrder, { withCredentials: true });
   return res.data;
 };
 

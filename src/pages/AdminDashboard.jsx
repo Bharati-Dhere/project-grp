@@ -34,6 +34,7 @@ export default function AdminDashboard() {
       try {
         const ordersRes = await fetch('/api/admin/orders', { credentials: 'include' });
         const ordersData = await ordersRes.json();
+        // Always count orders with status !== 'Cancelled'
         setOrders(Array.isArray(ordersData.data) ? ordersData.data : []);
       } catch (err) {
         setOrders([]);
@@ -95,7 +96,7 @@ export default function AdminDashboard() {
 
   // Dashboard analytics summary
   const totalUsers = users.length;
-  const totalOrders = orders.filter(o => o.status !== 'Cancelled').length;
+  const totalOrders = Array.isArray(orders) ? orders.filter(o => o.status !== 'Cancelled').length : 0;
 
   return (
     <main className="flex-1 p-6 transition-all duration-500 ease-in-out">
