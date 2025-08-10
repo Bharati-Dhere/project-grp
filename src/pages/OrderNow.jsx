@@ -103,25 +103,9 @@ useEffect(() => {
   }
 }, [showWishlistModal, wishlistModalKey]);
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !(user.email || user._id || user.id)) {
-      navigate("/ordernow");
-      return;
-    }
-    // Autofill address/pincode from profile if available
-    if (!shipping.address && !shipping.pincode) {
-      const users = JSON.parse(localStorage.getItem("users")) || [];
-      const profile = users.find(u => u.email === user.email);
-      if (profile && (profile.address || profile.pincode)) {
-        setShipping(s => ({
-          ...s,
-          address: profile.address || "",
-          pincode: profile.pincode || ""
-        }));
-      }
-    }
-  }, [navigate]);
+  // Use context/backend for user authentication state
+  // Remove localStorage usage for user/session
+  // You may want to use useAuth() here if needed
 
   const handleNext = () => setStep((s) => Math.min(s + 1, ORDER_STEPS.length - 1));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
