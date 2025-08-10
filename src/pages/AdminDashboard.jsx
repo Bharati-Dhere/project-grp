@@ -25,16 +25,24 @@ export default function AdminDashboard() {
         const usersRes = await fetch('/api/users', { credentials: 'include' });
         const usersData = await usersRes.json();
         setUsers(usersData);
-      } catch {
+        if (!Array.isArray(usersData) || usersData.length === 0) {
+          alert('No users found or users data is not an array: ' + JSON.stringify(usersData));
+        }
+      } catch (err) {
         setUsers([]);
+        alert('Error fetching users: ' + err.message);
       }
       // Fetch orders from backend
       try {
         const ordersRes = await fetch('/api/admin/orders', { credentials: 'include' });
         const ordersData = await ordersRes.json();
         setOrders(Array.isArray(ordersData) ? ordersData : []);
-      } catch {
+        if (!Array.isArray(ordersData) || ordersData.length === 0) {
+          alert('No orders found or orders data is not an array: ' + JSON.stringify(ordersData));
+        }
+      } catch (err) {
         setOrders([]);
+        alert('Error fetching orders: ' + err.message);
       }
     }
     fetchData();

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import OrderRelatedCard from '../components/OrderRelatedCard';
 import { FaHeart, FaRegHeart, FaPuzzlePiece, FaPlus, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
+import { placeOrder } from '../utils/api';
 
 const ORDER_STEPS = [
   "Shipping Info",
@@ -124,19 +125,13 @@ useEffect(() => {
   };
   const [deliveryDate, setDeliveryDate] = useState(getEstimatedDeliveryDate());
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setShowPopup(true);
-      // Save order(s) to localStorage for user and admin
+    try {
       const user = JSON.parse(localStorage.getItem("loggedInUser"));
-      const globalOrders = JSON.parse(localStorage.getItem("orders")) || [];
-      const userOrders = JSON.parse(localStorage.getItem(`orders_${user?.email}`)) || [];
       let newOrder = null;
       if (orderProducts && Array.isArray(orderProducts)) {
         newOrder = {
-          id: Date.now() + Math.floor(Math.random() * 10000),
           products: orderProducts.map(p => ({
             name: p.name,
             productId: p.id,
@@ -153,17 +148,16 @@ useEffect(() => {
         };
       }
       if (newOrder) {
-        // Save to user's own orders
-        const updatedUserOrders = [...userOrders, newOrder].filter(o => o.userEmail === user?.email);
-        localStorage.setItem(`orders_${user?.email}`, JSON.stringify(updatedUserOrders));
-        // Save to global orders
-        localStorage.setItem("orders", JSON.stringify([...globalOrders, newOrder]));
-      }
-      // Optionally clear cart after placing order
-      if (orderProducts && Array.isArray(orderProducts)) {
+        await placeOrder(newOrder);
+        // Optionally clear cart after placing order
         localStorage.setItem("cart", JSON.stringify([]));
       }
-    }, 1500);
+      setShowPopup(true);
+    } catch (err) {
+      alert("Error placing order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

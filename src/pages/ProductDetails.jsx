@@ -42,25 +42,22 @@ function ProductDetails() {
         setAvgRating(data.avgRating || null);
         setReviews(data.reviews || []);
         // Fetch related products and accessories from backend (same category or brand, exclude self)
-        const [allProductsRes, allAccessoriesRes] = await Promise.all([
-          fetchProducts(),
-          (await import('../utils/api')).fetchAccessories()
+        const api = await import('../utils/api');
+        const [allProducts, allAccessories] = await Promise.all([
+          api.fetchProducts(),
+          api.fetchAccessories()
         ]);
-        const allProducts = Array.isArray(allProductsRes.data) ? allProductsRes.data : [];
-        const allAccessories = Array.isArray(allAccessoriesRes.data) ? allAccessoriesRes.data : [];
-        const relatedItems = [
-          ...allProducts.filter(
-            (p) =>
-              (p._id !== id && p.id !== id) &&
-              (p.category === data.category || p.brand === data.brand)
-          ),
-          ...allAccessories.filter(
-            (a) =>
-              (a._id !== id && a.id !== id) &&
-              (a.category === data.category || a.brand === data.brand)
-          )
-        ];
-        setRelated(relatedItems.slice(0, 4));
+        const relatedProducts = allProducts.filter(
+          (p) =>
+            (p._id !== id && p.id !== id) &&
+            (p.category === data.category || p.brand === data.brand)
+        );
+        const relatedAccessories = allAccessories.filter(
+          (a) =>
+            (a._id !== id && a.id !== id) &&
+            (a.category === data.category || a.brand === data.brand)
+        );
+        setRelated([...relatedProducts, ...relatedAccessories].slice(0, 4));
       } catch (err) {
         setProduct(null);
       }
@@ -336,20 +333,29 @@ function ProductDetails() {
         ) : (
           <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">Log in to add a review.</div>
         )}
-        <div className="space-y-4">
-          {reviews.length === 0 && <div className="text-gray-500">No reviews yet.</div>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {reviews.length === 0 && <div className="text-gray-500 col-span-2">No reviews yet.</div>}
           {(showAllReviews ? reviews : reviews.slice(0,5)).map((r, idx) => (
-            <div key={idx} className="bg-white border rounded-lg p-3 shadow flex flex-col md:flex-row md:items-center gap-2">
-              <div className="flex items-center gap-2 mb-1 md:mb-0">
-                <span className="font-bold text-blue-700">{r.user}</span>
-                <span className="text-yellow-500 flex items-center">
-                  {[1,2,3,4,5].map(star => (
-                    <FaStar key={star} className={r.value >= star ? 'text-yellow-400' : 'text-gray-300'} size={18} />
-                  ))}
-                  <span className="ml-1 text-sm">{r.value}</span>
-                </span>
+            <div key={idx} className="bg-white border rounded-xl p-4 shadow flex flex-col h-full">
+              <div className="flex items-center gap-3 mb-2">
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`}
+                  alt={r.name || r.user || r.email || 'User'}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                />
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="font-semibold text-gray-800 text-sm break-all">{r.name || r.user || r.email || 'User'}</span>
+                  <span className="flex items-center gap-1 mt-1">
+                    {[1,2,3,4,5].map(star => (
+                      <FaStar key={star} className={r.value >= star ? 'text-yellow-400' : 'text-gray-300'} size={15} />
+                    ))}
+                    <span className="text-xs text-gray-600 font-semibold ml-1">{r.value}/5</span>
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 text-gray-700">{r.review}</div>
+              <div className="text-gray-800 text-sm whitespace-pre-line break-words mt-2">
+                {r.review}
+              </div>
             </div>
           ))}
         </div>
@@ -365,15 +371,15 @@ function ProductDetails() {
         )}
       </div>
 
-      {/* Related Products Section */}
+      {/* Related Products & Accessories Section */}
       <div className="mt-10">
-        <h3 className="text-xl font-bold mb-4">Related Products</h3>
+        <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
-          {related.map((p) => (
+          {related.map((item) => (
             <ProductCard
-              key={p._id || p.id}
-              product={p}
-              detailsPath="productdetails"
+              key={item._id || item.id}
+              product={item}
+              detailsPath={item.category ? (item.category.toLowerCase().includes('accessor') ? 'accessoriesdetailspage' : 'productdetails') : 'productdetails'}
               showActions={!!user}
             />
           ))}

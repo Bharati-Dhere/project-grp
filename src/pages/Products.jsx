@@ -38,8 +38,8 @@ const Products = () => {
     async function fetchProductsAndUserData() {
       try {
         const res = await import('../utils/api');
-        const productsRes = await res.fetchProducts();
-  setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+        const productsArr = await res.fetchProducts();
+        setProducts(Array.isArray(productsArr) ? productsArr : []);
       } catch (err) {
         setProducts([]);
       }

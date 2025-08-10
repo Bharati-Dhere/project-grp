@@ -23,14 +23,26 @@ const AdminEditProduct = () => {
     if (type === "Product") {
       fetchProducts().then((products) => {
         const found = products.find((p) => String(p._id || p.id) === String(id));
+        if (!found) {
+          // Debug output
+          alert(`Product with id ${id} not found. Products: ` + JSON.stringify(products));
+        }
         setProduct(found);
         setImagePreviews(found?.images || (found?.image ? [found.image] : []));
+      }).catch(err => {
+        alert('Error fetching products: ' + err.message);
       });
     } else {
       fetchAccessories().then((accessories) => {
         const found = accessories.find((p) => String(p._id || p.id) === String(id));
+        if (!found) {
+          // Debug output
+          alert(`Accessory with id ${id} not found. Accessories: ` + JSON.stringify(accessories));
+        }
         setProduct(found);
         setImagePreviews(found?.images || (found?.image ? [found.image] : []));
+      }).catch(err => {
+        alert('Error fetching accessories: ' + err.message);
       });
     }
   }, [id, type]);

@@ -17,12 +17,12 @@ export const fetchLatestOffers = async () => {
 
 export const fetchProducts = async () => {
   const res = await axios.get(`${API_BASE}/products`);
-  return res.data;
+    return res.data.data;
 };
 
 export const fetchAccessories = async () => {
   const res = await axios.get(`${API_BASE}/accessories`);
-  return res.data;
+  return res.data.data; // Return the array of accessories directly
 };
 
 export const addProduct = async (product) => {

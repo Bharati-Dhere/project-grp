@@ -57,22 +57,18 @@ const AdminExistingProducts = () => {
 
   useEffect(() => {
     if (type === "Product") {
-      fetchProducts().then((res) => {
-        const data = res.data || [];
-        setItems(data);
-        setProductCount(data.length);
+      fetchProducts().then((data) => {
+        const products = Array.isArray(data) ? data : [];
+        setItems(products);
+        setProductCount(products.length);
         setCategories(FIXED_PRODUCT_CATEGORIES);
         setBrands(FIXED_PRODUCT_BRANDS);
       });
     } else {
-      fetchAccessories().then((res) => {
-        const data = res.data || [];
-        console.log("Admin Accessories Loaded:", data);
-        if (Array.isArray(data)) {
-          data.forEach(acc => console.log("Accessory ID:", acc._id || acc.id, "Name:", acc.name));
-        }
-        setItems(data);
-        setAccessoryCount(data.length);
+      fetchAccessories().then((data) => {
+        const accessories = Array.isArray(data) ? data : [];
+        setItems(accessories);
+        setAccessoryCount(accessories.length);
         setCategories(FIXED_ACCESSORY_CATEGORIES);
         setBrands(FIXED_ACCESSORY_BRANDS);
       });
@@ -91,16 +87,14 @@ const AdminExistingProducts = () => {
     if (window.confirm(`Are you sure you want to delete this ${type.toLowerCase()}?`)) {
       if (type === "Product") {
         await deleteProduct(id);
-        const res = await fetchProducts();
-        const data = res.data || [];
-        setItems(data);
-        setProductCount(data.length);
+        const products = await fetchProducts();
+        setItems(Array.isArray(products) ? products : []);
+        setProductCount(Array.isArray(products) ? products.length : 0);
       } else {
         await deleteAccessory(id);
-        const res = await fetchAccessories();
-        const data = res.data || [];
-        setItems(data);
-        setAccessoryCount(data.length);
+        const accessories = await fetchAccessories();
+        setItems(Array.isArray(accessories) ? accessories : []);
+        setAccessoryCount(Array.isArray(accessories) ? accessories.length : 0);
       }
     }
   };

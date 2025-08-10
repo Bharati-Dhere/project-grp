@@ -31,7 +31,7 @@ export default function Accessories() {
 
   useEffect(() => {
     fetchAccessories().then((data) => {
-      setAccessories(Array.isArray(data.data) ? data.data : []);
+      setAccessories(Array.isArray(data) ? data : []);
     });
   }, []);
 

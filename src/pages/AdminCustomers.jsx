@@ -17,10 +17,10 @@ export default function AdminCustomers() {
         const ordersRes = await axios.get("/api/admin/orders", { withCredentials: true });
         setOrders(ordersRes.data);
       } catch (err) {
-        setUsers([]);
-        setOrders([]);
-        // Debug: show error in UI
-        window.alert("Error fetching users: " + (err.response?.data?.message || err.message));
+  setUsers([]);
+  setOrders([]);
+  // Debug: show error in UI
+  window.alert("Error fetching users or orders: " + (err.response?.data?.message || err.message));
       }
     }
     fetchData();
@@ -42,6 +42,8 @@ export default function AdminCustomers() {
         ) : (
           <>
             <li className="text-xs text-gray-400">Raw users: <pre>{JSON.stringify(users, null, 2)}</pre></li>
+            {/* Debug: show user count */}
+            <li className="text-xs text-red-500">User count: {users.length}</li>
             {users.map((u) => (
               <li key={u._id} className="bg-gray-50 p-4 rounded flex justify-between items-center cursor-pointer hover:bg-blue-50" onClick={() => setSelectedUser(u)}>
                 <span className="font-semibold text-blue-800">{u.name}</span>
