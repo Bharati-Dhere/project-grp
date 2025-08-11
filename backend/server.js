@@ -24,6 +24,7 @@ app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api/check-email', require('./routes/checkEmail'));
+const reviewsRouter = require('./routes/reviews');
 app.use('/api/change-password', require('./routes/changePassword'));
 
 
@@ -45,6 +46,7 @@ app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 
+app.use('/api/reviews', reviewsRouter);
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

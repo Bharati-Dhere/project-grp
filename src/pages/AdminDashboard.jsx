@@ -208,7 +208,7 @@ export default function AdminDashboard() {
           <span className="text-gray-600 mt-2">Feedback</span>
         </div>
       </div>
-      {/* Highest/Lowest Sale & Low Stock Alerts */}
+      Highest/Lowest Sale & Low Stock Alerts
       <div className="grid md:grid-cols-3 gap-8 mb-10">
         <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded shadow animate-fade-in">
           <strong>Highest Sale (Week):</strong><br />

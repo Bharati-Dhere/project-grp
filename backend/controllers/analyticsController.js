@@ -48,15 +48,23 @@ exports.getSalesAnalytics = async (req, res) => {
             acc = allAccessories.find(a => a.name === item.name);
           }
         }
-        // If missing info, fill from db
-        const category = item.category || prod?.category || acc?.category;
-        const brand = item.brand || prod?.brand || acc?.brand;
-        const name = item.name || prod?.name || acc?.name;
         let typeVal = prod ? 'Product' : acc ? 'Accessory' : (item.productType || type);
-        // If found in accessories, force type to Accessory
         if (acc) typeVal = 'Accessory';
         // Only count if type matches
         if ((typeVal === 'Product' && type === 'Product') || (typeVal === 'Accessory' && type === 'Accessory')) {
+          // Always get name/category/brand from DB if possible
+          let name = item.name;
+          let category = item.category;
+          let brand = item.brand;
+          if (prod) {
+            name = prod.name;
+            category = prod.category;
+            brand = prod.brand;
+          } else if (acc) {
+            name = acc.name;
+            category = acc.category;
+            brand = acc.brand;
+          }
           if (req.query.category && category !== req.query.category) continue;
           if (req.query.brand && brand !== req.query.brand) continue;
           if (!salesMap[key]) {

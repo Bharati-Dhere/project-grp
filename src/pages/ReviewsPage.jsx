@@ -7,9 +7,8 @@ const ReviewPage = () => {
   const { reviews } = useReviews();
   const [filter, setFilter] = useState('newest');
 
-  // ✅ Only include user-added reviews (with numeric id)
-  // Use all reviews from backend
-  const userReviews = reviews;
+  // Only include user-added reviews (with 'text' field, not product/accessory reviews)
+  const userReviews = Array.isArray(reviews) ? reviews.filter(r => r.text && !r.productId && !r.accessoryId) : [];
 
   const sortedReviews = [...userReviews].sort((a, b) => {
     if (filter === 'newest') return b.id - a.id;

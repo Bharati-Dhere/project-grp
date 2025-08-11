@@ -9,27 +9,30 @@ const AddReview = () => {
   const [name, setName] = useState('');
   const [rating, setRating] = useState(5);
   const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const newReview = {
-      id: Date.now(),
-      name,
-      rating: parseInt(rating),
-      description,
-      avatar: '/images/default-user.jpg', // Optional avatar
-      date: new Date().toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    };
-
-    addReview(newReview);
-    navigate('/review'); // ✅ Redirect to reviews page after submit
+    if (!name || !description || !rating) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      // Use 'text' instead of 'description' for user reviews
+      await addReview({ name, text: description, rating });
+      setName('');
+      setDescription('');
+      setRating(0);
+      navigate('/reviews');
+    } catch (err) {
+      setError('Failed to submit review.');
+    } finally {
+      setLoading(false);
+    }
   };
-
   const handleClose = () => {
     navigate('/review'); // ✅ Redirect if user cancels
   };
@@ -46,6 +49,10 @@ const AddReview = () => {
       </button>
 
       <h3 className="text-2xl font-semibold mb-4 text-center">Add Your Review</h3>
+
+      {error && (
+        <div className="text-red-600 text-center mb-2">{error}</div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
@@ -81,8 +88,9 @@ const AddReview = () => {
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          disabled={loading}
         >
-          Submit Review
+          {loading ? 'Submitting...' : 'Submit Review'}
         </button>
       </form>
     </div>

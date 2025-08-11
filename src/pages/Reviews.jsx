@@ -18,7 +18,10 @@ export default function Reviews() {
       .catch(() => setReviews([]));
   }, []);
 
+  // Only show user-added reviews (not product/accessory reviews)
   const filteredReviews = reviews.filter((r) => {
+    // User reviews have 'text' field and no productId/accessoryId
+    if (r.productId || r.accessoryId) return false;
     let match = true;
     if (filter.rating !== "All" && r.rating !== Number(filter.rating)) match = false;
     if (filter.date === "Last 30 days") {

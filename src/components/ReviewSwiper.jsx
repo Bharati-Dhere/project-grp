@@ -11,8 +11,10 @@ import StarRating from './StarRating';
 const ReviewSwiper = () => {
   const navigate = useNavigate();
   const { reviews } = useReviews();
-  // const latestReviews = reviews.slice(0, 4);
-  const latestReviews = [...reviews].slice(0, 4); // OR reversed to show most recent
+  // Only show user-added reviews (with 'text' field, not product/accessory reviews)
+  const userReviews = Array.isArray(reviews) ? reviews.filter(r => r.text && !r.productId && !r.accessoryId) : [];
+  // Show latest 4 user reviews
+  const latestReviews = [...userReviews].slice(-4).reverse();
 
 
   return (

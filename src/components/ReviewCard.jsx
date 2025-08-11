@@ -15,7 +15,7 @@ const ReviewCard = ({ review }) => {
           <p className="text-sm text-gray-500">{review.date}</p>
         </div>
       </div>
-      <p className="text-gray-700 mt-2">{review.description}</p>
+  <p className="text-gray-700 mt-2">{review.text || review.description}</p>
       <p className="text-yellow-500">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
       
     </motion.div>
