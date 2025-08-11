@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { fetchFeedback, deleteFeedback } from "../utils/feedbackApi";
+import { sendAdminReply } from "../utils/sendAdminReply";
 
 export default function AdminFeedback() {
   const [feedbacks, setFeedbacks] = useState([]);
   const [sortOrder, setSortOrder] = useState("desc");
+  const [replyModal, setReplyModal] = useState({ open: false, fb: null });
+  const [replySubject, setReplySubject] = useState("");
+  const [replyBody, setReplyBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [sendSuccess, setSendSuccess] = useState("");
 
   useEffect(() => {
     async function loadFeedback() {
@@ -52,13 +59,66 @@ export default function AdminFeedback() {
               >Delete</button>
               <button
                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-700"
-                onClick={() => window.alert('Reply feature coming soon!')}
+                onClick={() => {
+                  setReplyModal({ open: true, fb });
+                  setReplySubject(`Re: ${fb.subject || 'Feedback Response'}`);
+                  setReplyBody(`Hi ${fb.name || ''},\n\n`);
+                }}
                 title="Reply to this feedback"
               >Reply</button>
             </div>
           </li>
         ))}
       </ul>
+
+      {/* Reply Modal for backend email sending */}
+      {replyModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-3 text-gray-500 hover:text-red-600 text-xl"
+              onClick={() => setReplyModal({ open: false, fb: null })}
+              title="Close"
+            >✕</button>
+            <h2 className="text-xl font-semibold mb-4">Reply to {replyModal.fb?.name || 'User'}</h2>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">To:</label>
+              <input type="email" className="w-full p-2 border rounded bg-gray-100" value={replyModal.fb?.email || replyModal.fb?.userEmail || ''} disabled />
+            </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">Subject:</label>
+              <input type="text" className="w-full p-2 border rounded" value={replySubject} onChange={e => setReplySubject(e.target.value)} />
+            </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium">Message:</label>
+              <textarea className="w-full p-2 border rounded" rows={6} value={replyBody} onChange={e => setReplyBody(e.target.value)} />
+            </div>
+            {sendError && <div className="text-red-600 mb-2">{sendError}</div>}
+            {sendSuccess && <div className="text-green-600 mb-2">{sendSuccess}</div>}
+            <button
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              disabled={sending}
+              onClick={async () => {
+                setSending(true);
+                setSendError("");
+                setSendSuccess("");
+                try {
+                  await sendAdminReply({
+                    to: replyModal.fb?.email || replyModal.fb?.userEmail || '',
+                    subject: replySubject,
+                    text: replyBody
+                  });
+                  setSendSuccess('Reply sent successfully!');
+                } catch (err) {
+                  setSendError('Failed to send reply.');
+                } finally {
+                  setSending(false);
+                }
+              }}
+            >{sending ? 'Sending...' : 'Send Reply'}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

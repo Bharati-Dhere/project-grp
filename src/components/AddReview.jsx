@@ -26,7 +26,7 @@ const AddReview = () => {
       setName('');
       setDescription('');
       setRating(0);
-      navigate('/reviews');
+      navigate('/review');
     } catch (err) {
       setError('Failed to submit review.');
     } finally {

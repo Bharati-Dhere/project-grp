@@ -181,8 +181,8 @@ export default function AdminDashboard() {
   const productCount = products.length;
   const accessoryCount = accessories.length;
   const userCount = users.length;
-  // Only count non-cancelled orders
-  const orderCount = orders.filter(o => o.status !== 'cancelled' && o.status !== 'Cancelled').length;
+  // Only count active orders (not delivered, not cancelled)
+  const orderCount = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'Delivered').length;
   const feedbackCount = feedback.length;
   const customerCount = userCount; // If customers are different, adjust logic
 

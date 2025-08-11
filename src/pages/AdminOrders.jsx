@@ -3,7 +3,7 @@ import { fetchOrders, updateOrderStatus } from "../utils/api";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
-  const [tab, setTab] = useState('active'); // 'active' or 'cancelled'
+  const [tab, setTab] = useState('active'); // 'active', 'cancelled', or 'history'
   const [detailsOrder, setDetailsOrder] = useState(null);
   const [deliveryDateInput, setDeliveryDateInput] = useState("");
 
@@ -64,10 +64,14 @@ export default function AdminOrders() {
 
   const filteredOrders = orders.filter(o => {
     if (tab === 'active') {
-      return o.status !== 'Cancelled';
-    } else {
+      // Show orders that are not Cancelled and not Delivered
+      return o.status !== 'Cancelled' && o.status !== 'Delivered';
+    } else if (tab === 'cancelled') {
       return o.status === 'Cancelled';
+    } else if (tab === 'history') {
+      return o.status === 'Delivered';
     }
+    return false;
   });
 
   return (
@@ -78,6 +82,10 @@ export default function AdminOrders() {
           className={`px-4 py-2 rounded ${tab === 'active' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           onClick={() => setTab('active')}
         >Active Orders</button>
+        <button
+          className={`px-4 py-2 rounded ${tab === 'history' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setTab('history')}
+        >History</button>
         <button
           className={`px-4 py-2 rounded ${tab === 'cancelled' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
           onClick={() => setTab('cancelled')}

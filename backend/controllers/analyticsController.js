@@ -25,8 +25,26 @@ exports.getSalesAnalytics = async (req, res) => {
     // Fetch orders in date range, populate items.product
     const orders = await Order.find({
       createdAt: { $gte: start, $lte: end },
-      status: { $ne: 'Cancelled' }
+      status: 'Delivered'
     }).populate('items.product');
+    console.log('--- Delivered Orders in Range ---');
+    orders.forEach(order => {
+      console.log(`OrderID: ${order._id}, createdAt: ${order.createdAt}, status: ${order.status}`);
+      (order.items || []).forEach(item => {
+        console.log('  Item:', {
+          name: item.name,
+          productId: item.productId,
+          price: item.price,
+          quantity: item.quantity,
+          product: item.product ? {
+            _id: item.product._id,
+            name: item.product.name,
+            category: item.product.category,
+            brand: item.product.brand
+          } : null
+        });
+      });
+    });
     // Aggregate sales by item
     const salesMap = {};
     // Preload all products and accessories for lookup
