@@ -38,6 +38,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/otp', otpRoutes);
 
 app.use('/api/admin', adminRoutes);

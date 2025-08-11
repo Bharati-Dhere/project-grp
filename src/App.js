@@ -1,3 +1,5 @@
+
+import AdminPanel from "./pages/AdminPanel";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 // import OrderHistory from "./pages/OrderHistory";
