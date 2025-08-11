@@ -53,7 +53,7 @@ exports.getSalesAnalytics = async (req, res) => {
     for (const order of orders) {
       for (const item of order.items || []) {
         let prod = null, acc = null;
-        let key = item.productId || item.id || (item.product && (item.product._id || item.product.id));
+        let key = item.product || item.id;
         // Try to resolve product or accessory from populated product ref
         if (item.product && item.product.category !== undefined) {
           // It's a Product
