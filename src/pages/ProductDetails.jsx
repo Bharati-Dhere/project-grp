@@ -432,7 +432,7 @@ function ProductDetails() {
             <div key={idx} className="bg-white border rounded-xl p-4 shadow flex flex-col h-full">
               <div className="flex items-center gap-3 mb-2">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`}
+                  src={r.avatar && r.avatar.trim() !== '' ? r.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`}
                   alt={r.name || r.user || r.email || 'User'}
                   className="w-12 h-12 rounded-full object-cover border border-gray-200"
                 />

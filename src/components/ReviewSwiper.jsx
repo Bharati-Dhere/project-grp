@@ -39,7 +39,7 @@ const ReviewSwiper = () => {
             <SwiperSlide key={review.id}>
               <div className="bg-white shadow rounded-lg p-6 text-center hover:shadow-lg transition">
                 <img
-                  src={review.avatar || review.userAvatar || defaultAvatar}
+                  src={review.avatar && review.avatar.trim() !== '' ? review.avatar : (review.userAvatar || defaultAvatar)}
                   className="w-16 h-16 mx-auto rounded-full mb-4"
                   alt={review.name}
                   onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}

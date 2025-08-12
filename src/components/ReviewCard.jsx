@@ -11,7 +11,7 @@ const ReviewCard = ({ review }) => {
     >
       <div className="flex items-center mb-2 gap-3">
         <img
-          src={review.avatar || review.userAvatar || defaultAvatar}
+          src={review.avatar && review.avatar.trim() !== '' ? review.avatar : (review.userAvatar || defaultAvatar)}
           alt="avatar"
           className="w-10 h-10 rounded-full"
           onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
