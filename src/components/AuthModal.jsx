@@ -268,11 +268,20 @@ export default function AuthModal({ onClose, role }) {
               showModal={showPasswordReset}
               setShowModal={setShowPasswordReset}
               user={{ email: forgotEmail, emailVerified: true }}
+              // When password reset is successful, switch to login modal
+              onSuccess={() => {
+                setForgotStep(0);
+                setForgotEmail("");
+                setForgotError("");
+                setShowPasswordReset(false);
+                setIsLogin(true);
+                toast.success("Password reset successful! Please log in.");
+              }}
             />
             <button
               type="button"
               className="w-full mt-2 text-gray-600 underline"
-              onClick={() => { setForgotStep(0); setForgotEmail(""); setForgotError(""); setShowPasswordReset(false); }}
+              onClick={() => { setForgotStep(0); setForgotEmail(""); setForgotError(""); setShowPasswordReset(false); setIsLogin(true); }}
             >
               Back to Login
             </button>
@@ -282,7 +291,7 @@ export default function AuthModal({ onClose, role }) {
             <p className="text-green-700 mb-4">Check your email for a password reset link.</p>
             <button
               className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition duration-200 text-base sm:text-sm"
-              onClick={() => { setForgotStep(0); setForgotEmail(""); setForgotError(""); }}
+              onClick={() => { setForgotStep(0); setForgotEmail(""); setForgotError(""); setIsLogin(true); }}
             >
               Back to Login
             </button>

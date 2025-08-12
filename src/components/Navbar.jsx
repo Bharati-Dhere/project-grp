@@ -16,6 +16,12 @@ export default function Navbar() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
 
+  // Helper to logout and redirect
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
   useEffect(() => {
     const fetchCounts = async () => {
       if (user && user._id) {
@@ -193,7 +199,7 @@ export default function Navbar() {
 
             {user && (
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="ml-2 text-sm text-gray-700 hover:text-black hover:underline transition-colors duration-200"
               >
                 Logout
