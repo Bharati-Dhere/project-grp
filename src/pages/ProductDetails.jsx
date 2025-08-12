@@ -110,10 +110,17 @@ function ProductDetails() {
       return;
     }
     try {
+      // Attach user avatar if available (prefer user.profile.avatar, fallback to user.avatar)
+      let avatar = undefined;
+      if (user?.profile && user.profile.avatar && user.profile.avatar.trim() !== '') {
+        avatar = user.profile.avatar;
+      } else if (user?.avatar && user.avatar.trim() !== '') {
+        avatar = user.avatar;
+      }
       await fetch(`http://localhost:5000/api/products/${id}/rate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: user.email, value: userRating, review: userReview })
+        body: JSON.stringify({ user: user.email, value: userRating, review: userReview, avatar })
       });
       setShowToast(true);
       setUserReview("");

@@ -125,7 +125,7 @@ exports.deleteAccessory = async (req, res) => {
 
 exports.rateAccessory = async (req, res) => {
   try {
-    const { user, value, review } = req.body;
+    const { user, value, review, avatar } = req.body;
     if (!user || typeof value !== 'number') return res.status(400).json({ success: false, message: 'User and value required' });
     const accessory = await Accessory.findById(req.params.id);
     if (!accessory) return res.status(404).json({ success: false, message: 'Accessory not found' });
@@ -133,7 +133,7 @@ exports.rateAccessory = async (req, res) => {
     accessory.reviews = accessory.reviews || [];
     const existing = accessory.reviews.find(r => r.user === user);
     if (existing) return res.status(400).json({ success: false, message: 'User already reviewed' });
-    accessory.reviews.push({ user, value, review });
+    accessory.reviews.push({ user, value, review, avatar });
     accessory.ratings.push({ user, value });
     await accessory.save();
     res.json({ success: true, message: 'Review added', data: accessory.reviews });

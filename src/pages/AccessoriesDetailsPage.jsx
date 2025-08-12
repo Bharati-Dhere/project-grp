@@ -7,10 +7,36 @@ import { FaHeart, FaRegHeart, FaStar } from 'react-icons/fa';
 import AuthModal from '../components/AuthModal';
 import ProductCard from '../components/ProductCard';
 
-// Add review handler (placeholder, implement as needed)
-const handleAddReview = async () => {
-  // TODO: Implement review submission logic
-  alert('Review submitted! (Implement logic)');
+// Add review handler with avatar support
+const handleAddReview = async ({ user, userRating, userReview, id, setShowToast, setUserReview, setAccessory, setRatingCount, setAvgRating, setReviews }) => {
+  if (!user || !user.email) return;
+  try {
+    // Attach user avatar if available (prefer user.profile.avatar, fallback to user.avatar)
+    let avatar = undefined;
+    if (user?.profile && user.profile.avatar && user.profile.avatar.trim() !== '') {
+      avatar = user.profile.avatar;
+    } else if (user?.avatar && user.avatar.trim() !== '') {
+      avatar = user.avatar;
+    }
+    await fetch(`http://localhost:5000/api/accessories/${id}/rate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user: user.email, value: userRating, review: userReview, avatar })
+    });
+    setShowToast(true);
+    setUserReview("");
+    setTimeout(() => setShowToast(false), 3000);
+    // Refetch accessory to update rating and reviews
+    const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
+    const data = await res.json();
+    setAccessory(data);
+    setRatingCount(data.ratingCount || 0);
+    setAvgRating(data.avgRating || null);
+    setReviews(data.reviews || []);
+    window.dispatchEvent(new Event('reviewSubmitted'));
+  } catch (err) {
+    alert("Error submitting review");
+  }
 };
 
 export default function AccessoriesDetailsPage() {
@@ -381,7 +407,7 @@ export default function AccessoriesDetailsPage() {
               className="w-full border rounded p-2 mb-2"
               rows={2}
             />
-            <button onClick={handleAddReview} className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 font-semibold">Submit Review</button>
+            <button onClick={() => handleAddReview({ user, userRating, userReview, id, setShowToast, setUserReview, setAccessory, setRatingCount, setAvgRating, setReviews })} className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 font-semibold">Submit Review</button>
           </div>
         ) : (
           <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">Log in to add a review.</div>

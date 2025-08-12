@@ -10,7 +10,7 @@ const accessorySchema = new mongoose.Schema({
   brand: { type: String, default: "" },
   color: { type: String, default: "" },
   ratings: { type: [{ user: String, value: Number }], default: [] },
-  reviews: { type: [{ user: String, value: Number, review: String, createdAt: { type: Date, default: Date.now } }], default: [] },
+  reviews: { type: [{ user: String, value: Number, review: String, avatar: { type: String, default: '' }, createdAt: { type: Date, default: Date.now } }], default: [] },
   inStock: { type: Boolean, default: false },
   stock: { type: Number, default: 0 },
   isOffer: { type: Boolean, default: false },
