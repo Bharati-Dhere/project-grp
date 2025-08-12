@@ -131,7 +131,12 @@ function ProductDetails() {
       setProduct(data);
       setRatingCount(data.ratingCount || 0);
       setAvgRating(data.avgRating || null);
-      setReviews(data.reviews || []);
+      // Ensure the latest review is shown at the top
+      if (data.reviews && Array.isArray(data.reviews)) {
+        setReviews([...data.reviews]);
+      } else {
+        setReviews([]);
+      }
       // Dispatch event to auto-refresh product/admin lists
       window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
@@ -448,6 +453,7 @@ function ProductDetails() {
                   src={r.avatar && r.avatar.trim() !== '' ? r.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`}
                   alt={r.name || r.user || r.email || 'User'}
                   className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                  onError={e => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`; }}
                 />
                 <div className="flex flex-col flex-1 min-w-0">
                   <span className="font-semibold text-gray-800 text-sm break-all">{r.name || r.user || r.email || 'User'}</span>
@@ -490,13 +496,18 @@ function ProductDetails() {
             const cartModel = isAccessory ? 'Accessory' : 'Product';
             const itemInCart = cart.some(c => {
               const cid = c.product?._id || c.product?.id || c._id || c.id;
-              const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-              return String(cid) === String(itemId) && cmodel === cartModel;
+              let cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+              if (cmodel && typeof cmodel === 'string') cmodel = cmodel.toLowerCase();
+              let compareModel = cartModel.toLowerCase();
+              // For accessories, allow 'accessory' or 'Accessory'
+              return String(cid) === String(itemId) && (cmodel === compareModel || (compareModel === 'accessory' && cmodel === 'accessory'));
             });
             const itemInWishlist = wishlist.some(w => {
               const wid = w._id || w.id;
-              const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-              return String(wid) === String(itemId) && wmodel === cartModel;
+              let wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+              if (wmodel && typeof wmodel === 'string') wmodel = wmodel.toLowerCase();
+              let compareModel = cartModel.toLowerCase();
+              return String(wid) === String(itemId) && (wmodel === compareModel || (compareModel === 'accessory' && wmodel === 'accessory'));
             });
             return (
               <ProductCard

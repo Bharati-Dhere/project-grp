@@ -126,7 +126,12 @@ function AccessoriesDetailsPage() {
       setAccessory(data);
       setRatingCount(data.ratingCount || 0);
       setAvgRating(data.avgRating || null);
-      setReviews(data.reviews || []);
+      // Ensure the latest review is shown at the top
+      if (data.reviews && Array.isArray(data.reviews)) {
+        setReviews([...data.reviews]);
+      } else {
+        setReviews([]);
+      }
       window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
       alert("Error submitting review");
@@ -419,6 +424,7 @@ function AccessoriesDetailsPage() {
                   src={r.avatar && r.avatar.trim() !== '' ? r.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`}
                   alt={r.name || r.user || r.email || 'User'}
                   className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                  onError={e => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.user || r.email || 'U')}&background=random&size=64`; }}
                 />
                 <div className="flex flex-col flex-1 min-w-0">
                   <span className="font-semibold text-gray-800 text-sm break-all">{r.name || r.user || r.email || 'User'}</span>
