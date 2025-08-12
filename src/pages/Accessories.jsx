@@ -174,7 +174,7 @@ export default function Accessories() {
   };
 
   const handleCardClick = (id) => {
-  navigate(`/accessories/${id}`);
+  navigate(`/accessory/${id}`);
   };
 
 // Only show accessory-related categories and brands
@@ -272,7 +272,7 @@ const ACCESSORY_BRANDS = accessories.length
                   onAddToWishlist={() => handleAddToWishlist(accessory)}
                   onRemoveFromWishlist={() => handleRemoveFromWishlist(id, 'Accessory')}
                   showActions={true}
-                  detailsPath="accessories"
+                  detailsPath="accessory"
                   showBadges={true}
                 />
               );

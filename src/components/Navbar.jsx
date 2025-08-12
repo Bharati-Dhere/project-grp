@@ -51,8 +51,8 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden md:flex space-x-6">
-            {["/", "/products", "/accessories", "/review", "/help"].map((path, i) => {
-              const labels = ["Home", "Products", "Accessories", "Reviews", "Help"];
+            {["/", "/products", "/accessory", "/review", "/help"].map((path, i) => {
+              const labels = ["Home", "Products", "Accessory", "Reviews", "Help"];
               const isActive =
                 path === "/"
                   ? location.pathname === "/"

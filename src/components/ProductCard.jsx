@@ -110,13 +110,26 @@ export default function ProductCard({
     ) {
       return;
     }
-    // Use detailsPath prop to determine navigation
     const productId = product._id || product.id;
-    // Route to correct details page for product or accessory
-    if (detailsPath === 'accessories') {
-      navigate(`/accessories/${productId}`);
-    } else if (detailsPath === 'productdetails') {
+    // Robust detection: always route to /accessory/:id if product is an accessory
+    const isAccessory = (product.model && product.model.toLowerCase() === 'accessory')
+      || (product.type && product.type.toLowerCase() === 'accessory')
+      || (product.category && product.category.toLowerCase().includes('accessor'));
+    if (isAccessory) {
+      navigate(`/accessory/${productId}`);
+      return;
+    }
+    // Otherwise, use detailsPath
+    let path = detailsPath;
+    if (!detailsPath || detailsPath === '') {
+      path = 'productdetails';
+    }
+    if (path === 'productdetails') {
       navigate(`/productdetails/${productId}`);
+    } else if (path === 'accessory') {
+      navigate(`/accessory/${productId}`);
+    } else if (path === 'accessorydetails' || path === 'accessories') {
+      navigate(`/accessories/${productId}`);
     } else {
       // fallback: try productdetails
       navigate(`/productdetails/${productId}`);

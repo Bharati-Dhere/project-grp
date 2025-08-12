@@ -72,8 +72,8 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             {/* <Route path="/orders" element={<Orders />} /> */}
             <Route path="/products" element={<Products />} />
-            <Route path="/accessories" element={<Accessories />} />    
-            <Route path="/accessories/:id" element={<AccessoriesDetailsPage />} /> 
+            <Route path="/accessory" element={<Accessories />} />    
+            <Route path="/accessory/:id" element={<AccessoriesDetailsPage />} /> 
             <Route path="/search" element={<SearchResults />} />
             <Route path="/review" element={<ReviewsPage />} />
             <Route path="/add-review" element={<AddReview />} />

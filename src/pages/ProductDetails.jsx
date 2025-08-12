@@ -59,11 +59,13 @@ function ProductDetails() {
             (p._id !== id && p.id !== id) &&
             (p.category === data.category || p.brand === data.brand)
         );
-        const relatedAccessories = allAccessories.filter(
+        let relatedAccessories = allAccessories.filter(
           (a) =>
             (a._id !== id && a.id !== id) &&
             (a.category === data.category || a.brand === data.brand)
         );
+        // Ensure all accessories have model: 'Accessory' for robust routing
+        relatedAccessories = relatedAccessories.map(a => ({ ...a, model: 'Accessory' }));
         setRelated([...relatedProducts, ...relatedAccessories].slice(0, 4));
       } catch (err) {
         setProduct(null);
@@ -433,13 +435,16 @@ function ProductDetails() {
         <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
           {related.map((item) => {
-            const cat = item.category ? item.category.toLowerCase() : '';
-            const isAccessory = cat.includes('accessory') || cat.includes('accessories');
+            // Always use detailsPath='accessory' for accessories
+            const isAccessory = (item.model && item.model.toLowerCase() === 'accessory')
+              || (item.type && item.type.toLowerCase() === 'accessory')
+              || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty')) // likely accessory
+              || (item.category && item.category.toLowerCase().includes('accessor'));
             return (
               <ProductCard
                 key={item._id || item.id}
                 product={item}
-                detailsPath={isAccessory ? 'accessories' : 'productdetails'}
+                detailsPath={isAccessory ? 'accessory' : 'productdetails'}
                 showActions={!!user}
               />
             );
