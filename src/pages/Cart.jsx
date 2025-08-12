@@ -5,19 +5,23 @@ import { fetchCart, updateCart, fetchWishlist, updateWishlist, removeFromCart } 
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
+
 export default function Cart() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
-
+  const [loading, setLoading] = useState(true);
 
   // Helper to reload cart from backend
-  const reloadCart = async () => {
+  // Only show loading on first mount, not on every reload
+  const reloadCart = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     if (!user || !user._id) {
       setCart([]);
       setWishlist([]);
+      if (showLoading) setLoading(false);
       return;
     }
     try {
@@ -31,6 +35,7 @@ export default function Cart() {
       setCart([]);
       setWishlist([]);
     }
+    if (showLoading) setLoading(false);
   };
 
   useEffect(() => {
@@ -38,12 +43,13 @@ export default function Cart() {
       setCart([]);
       setWishlist([]);
       setShowAuthModal(true);
+      setLoading(false);
       return;
     }
     setShowAuthModal(false);
-    reloadCart();
+    reloadCart(true); // only show loading on first mount
     // Always reload on cart/wishlist update event
-    const handler = () => reloadCart();
+    const handler = () => reloadCart(false); // don't show loading on event
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
@@ -97,9 +103,13 @@ export default function Cart() {
   }
   return (
     <div className="w-full max-w-7xl mx-auto p-4 md:p-8">
-      {cart.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-lg font-semibold flex flex-col items-center justify-center text-blue-600 animate-pulse">
+          Loading cart...
+        </div>
+      ) : cart.length === 0 ? (
         <div className="text-gray-500 text-center py-16 text-lg font-semibold flex flex-col items-center justify-center">
-          <span className="text-5xl mb-2">🛒</span>
+          <span className="text-5xl mb-2">6d2</span>
           No products in cart.
         </div>
       ) : (
@@ -131,7 +141,7 @@ export default function Cart() {
           {/* Total Price & Place Order Button */}
           <div className="flex flex-col md:flex-row items-center justify-between mt-8 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="text-lg font-semibold text-blue-700">
-              Total Price: <span className="font-bold">₹{cart.reduce((sum, p) => sum + (p.price || 0), 0)}</span>
+              Total Price: <span className="font-bold">9{cart.reduce((sum, p) => sum + (p.price || 0), 0)}</span>
             </div>
             <button
               className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-bold text-lg disabled:opacity-50"

@@ -6,19 +6,23 @@ import { fetchWishlist, updateWishlist, fetchCart, updateCart, removeFromCart } 
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
+
 export default function Wishlist() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
   const [cart, setCart] = useState([]);
-
+  const [loading, setLoading] = useState(true);
 
   // Helper to reload wishlist from backend
-  const reloadWishlist = async () => {
+  // Only show loading on first mount, not on every reload
+  const reloadWishlist = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     if (!user || !user._id) {
       setWishlist([]);
       setCart([]);
+      if (showLoading) setLoading(false);
       return;
     }
     try {
@@ -32,18 +36,20 @@ export default function Wishlist() {
       setWishlist([]);
       setCart([]);
     }
+    if (showLoading) setLoading(false);
   };
   useEffect(() => {
     if (!user || !user._id) {
       setWishlist([]);
       setCart([]);
       setShowAuthModal(true);
+      setLoading(false);
       return;
     }
     setShowAuthModal(false);
-    reloadWishlist();
+    reloadWishlist(true); // only show loading on first mount
     // Always reload on cart/wishlist update event
-    const handler = () => reloadWishlist();
+    const handler = () => reloadWishlist(false); // don't show loading on event
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
@@ -108,7 +114,11 @@ export default function Wishlist() {
   }
   return (
     <div className="w-full max-w-7xl mx-auto p-4 md:p-8">
-      {wishlist.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-lg font-semibold flex flex-col items-center justify-center text-blue-600 animate-pulse">
+          Loading wishlist...
+        </div>
+      ) : wishlist.length === 0 ? (
         <p className="text-gray-500 text-center">Your wishlist is empty.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
@@ -136,7 +146,7 @@ export default function Wishlist() {
           })}
         </div>
       )}
-      {wishlist.length > 0 && (
+      {wishlist.length > 0 && !loading && (
         <div className="mt-4">
           <button
             onClick={handleGoToOrderNow}

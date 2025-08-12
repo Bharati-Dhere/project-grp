@@ -21,13 +21,15 @@ export default function Navbar() {
       if (user && user._id) {
         try {
           const cart = await fetchCart(user._id);
-          setCartCount(Array.isArray(cart) ? cart.length : (cart?.items?.length || 0));
+          const cartArr = Array.isArray(cart?.data) ? cart.data : (Array.isArray(cart) ? cart : []);
+          setCartCount(cartArr.length);
         } catch (e) {
           setCartCount(0);
         }
         try {
           const wishlist = await fetchWishlist(user._id);
-          setWishlistCount(Array.isArray(wishlist) ? wishlist.length : (wishlist?.items?.length || 0));
+          const wishlistArr = Array.isArray(wishlist?.data) ? wishlist.data : (Array.isArray(wishlist) ? wishlist : []);
+          setWishlistCount(wishlistArr.length);
         } catch (e) {
           setWishlistCount(0);
         }
