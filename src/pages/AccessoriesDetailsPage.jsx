@@ -1,89 +1,44 @@
 
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { fetchProducts, fetchAccessories, fetchCart, fetchWishlist, updateCart, updateWishlist } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
-import { FaHeart, FaRegHeart, FaStar } from 'react-icons/fa';
-import AuthModal from '../components/AuthModal';
+import React, { useState, useEffect } from "react";
+import { FaHeart, FaRegHeart, FaStar } from "react-icons/fa";
+import { useParams, useNavigate } from "react-router-dom";
+import { fetchProducts, fetchAccessories, fetchCart, updateCart, fetchWishlist, updateWishlist } from '../utils/api';
+import { useAuth } from "../context/AuthContext";
+import AuthModal from "../components/AuthModal";
 import ProductCard from '../components/ProductCard';
 
-// Add review handler with avatar support
-const handleAddReview = async ({ user, userRating, userReview, id, setShowToast, setUserReview, setAccessory, setRatingCount, setAvgRating, setReviews }) => {
-  if (!user || !user.email) return;
-  try {
-    // Attach user avatar if available (prefer user.profile.avatar, fallback to user.avatar)
-    let avatar = undefined;
-    if (user?.profile && user.profile.avatar && user.profile.avatar.trim() !== '') {
-      avatar = user.profile.avatar;
-    } else if (user?.avatar && user.avatar.trim() !== '') {
-      avatar = user.avatar;
-    }
-    await fetch(`http://localhost:5000/api/accessories/${id}/rate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user: user.email, value: userRating, review: userReview, avatar })
-    });
-    setShowToast(true);
-    setUserReview("");
-    setTimeout(() => setShowToast(false), 3000);
-    // Refetch accessory to update rating and reviews
-    const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
-    const data = await res.json();
-    setAccessory(data);
-    setRatingCount(data.ratingCount || 0);
-    setAvgRating(data.avgRating || null);
-    setReviews(data.reviews || []);
-    window.dispatchEvent(new Event('reviewSubmitted'));
-  } catch (err) {
-    alert("Error submitting review");
-  }
-};
-
-export default function AccessoriesDetailsPage() {
+function AccessoriesDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [accessory, setAccessory] = useState(null);
   const [mainImage, setMainImage] = useState("");
-  const [isInCart, setIsInCart] = useState(false);
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const [amount, setAmount] = useState(1);
   const [userRating, setUserRating] = useState(5);
   const [userReview, setUserReview] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
-  const [showToast, setShowToast] = useState(false);
   const [ratingCount, setRatingCount] = useState(0);
   const [avgRating, setAvgRating] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [related, setRelated] = useState([]);
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
 
-  // Always use model 'Accessory' for this page
-  const getModel = () => 'Accessory';
+  // Helper to get model type
+  const getModel = (prod) => {
+    if (!prod) return 'Accessory';
+    if (prod.model) return prod.model;
+    if (prod.type && prod.type.toLowerCase() === 'accessory') return 'Accessory';
+    if (prod.category && prod.category.toLowerCase().includes('accessor')) return 'Accessory';
+    return 'Accessory';
+  };
 
   useEffect(() => {
-    // Reset all state on id change to avoid stale state
-    setAccessory(null);
-    setMainImage("");
-    setIsInCart(false);
-    setIsInWishlist(false);
-    setAmount(1);
-    setUserRating(5);
-    setUserReview("");
-    setShowAuthModal(false);
-    setAuthModalReason("");
-    setShowToast(false);
-    setRatingCount(0);
-    setAvgRating(null);
-    setReviews([]);
-    setShowAllReviews(false);
-    setRelated([]);
-    setCart([]);
-    setWishlist([]);
-
     async function fetchAll() {
       try {
         const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
@@ -94,9 +49,10 @@ export default function AccessoriesDetailsPage() {
         setAvgRating(data.avgRating || null);
         setReviews(data.reviews || []);
         // Fetch related products and accessories from backend (same category or brand, exclude self)
+        const api = await import('../utils/api');
         const [allProducts, allAccessories] = await Promise.all([
-          fetchProducts(),
-          fetchAccessories()
+          api.fetchProducts(),
+          api.fetchAccessories()
         ]);
         const relatedProducts = allProducts.filter(
           (p) =>
@@ -108,52 +64,75 @@ export default function AccessoriesDetailsPage() {
             (a._id !== id && a.id !== id) &&
             (a.category === data.category || a.brand === data.brand)
         );
-        // Ensure all accessories have model: 'Accessory' for robust routing
         relatedAccessories = relatedAccessories.map(a => ({ ...a, model: 'Accessory' }));
         setRelated([...relatedProducts, ...relatedAccessories].slice(0, 4));
-        // Cart & Wishlist from backend
-        if (user && user._id) {
-          try {
-            const cartData = await fetchCart(user._id);
-            setCart((cartData && cartData.data) || []);
-          } catch { setCart([]); }
-          try {
-            const wishlistData = await fetchWishlist(user._id);
-            setWishlist((wishlistData && wishlistData.data) || []);
-          } catch { setWishlist([]); }
-        } else {
-          setCart([]);
-          setWishlist([]);
-        }
       } catch (err) {
         setAccessory(null);
       }
+      // Cart & Wishlist from backend
+      if (user && user._id) {
+        try {
+          const cartData = await fetchCart(user._id);
+          setCart((cartData && cartData.data) || []);
+          setIsInCart(((cartData && cartData.data) || []).some((c) => {
+            const cid = c.product?._id || c.product?.id || c._id || c.id;
+            const cmodel = c.model || (c.category ? 'Accessory' : 'Product');
+            return cid === id && cmodel === getModel(accessory);
+          }));
+        } catch { setCart([]); setIsInCart(false); }
+        try {
+          const wishlistData = await fetchWishlist(user._id);
+          setWishlist((wishlistData && wishlistData.data) || []);
+          setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+            const wid = w._id || w.id;
+            const wmodel = w.model || (w.category ? 'Accessory' : 'Product');
+            return wid === id && wmodel === getModel(accessory);
+          }));
+        } catch { setWishlist([]); setIsInWishlist(false); }
+      } else {
+        setCart([]); setIsInCart(false);
+        setWishlist([]); setIsInWishlist(false);
+      }
     }
-
     fetchAll();
     // eslint-disable-next-line
-  }, [id, user]);
-  const handleRemoveFromWishlist = async () => {
+  }, [id]);
+
+  // Add review (rating + text)
+  const handleAddReview = async () => {
     if (!user || !user.email) {
-      setAuthModalReason("wishlist");
+      setAuthModalReason("review");
       setShowAuthModal(true);
       return;
     }
     try {
-      await updateWishlist(accessory._id, "remove", user?.token, 'Accessory');
-      if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-      const wishlistData = await fetchWishlist(user._id);
-      setWishlist((wishlistData && wishlistData.data) || []);
-      setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
-        const wid = w._id || w.id;
-        const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-        return wid === accessory._id && wmodel === 'Accessory';
-      }));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+      let avatar = undefined;
+      if (user?.profile && user.profile.avatar && user.profile.avatar.trim() !== '') {
+        avatar = user.profile.avatar;
+      } else if (user?.avatar && user.avatar.trim() !== '') {
+        avatar = user.avatar;
+      }
+      await fetch(`http://localhost:5000/api/accessories/${id}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ value: userRating, review: userReview, avatar })
+      });
+      setShowToast(true);
+      setUserReview("");
+      setTimeout(() => setShowToast(false), 3000);
+      // Refetch accessory to update rating and reviews
+      const res = await fetch(`http://localhost:5000/api/accessories/${id}`);
+      const data = await res.json();
+      setAccessory(data);
+      setRatingCount(data.ratingCount || 0);
+      setAvgRating(data.avgRating || null);
+      setReviews(data.reviews || []);
+      window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
-      alert('Error removing from wishlist: ' + (err?.response?.data?.message || err.message));
+      alert("Error submitting review");
     }
   };
+
   // Restrict guests from ordering
   const handleOrder = () => {
     if (!user || !user.email) {
@@ -164,35 +143,99 @@ export default function AccessoriesDetailsPage() {
     navigate("/ordernow", { state: { product: accessory, amount } });
   };
 
+  // Cart/Wishlist handlers using backend (robust for both models)
+  const handleAddToCart = async () => {
+    if (!user || !user.email) {
+      setAuthModalReason("cart");
+      setShowAuthModal(true);
+      return;
+    }
+    const model = getModel(accessory);
+    const prodId = accessory._id || accessory.id;
+    await updateCart(prodId, user?.token, model);
+    if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+    const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
+    setIsInCart(((cartData && cartData.data) || []).some((c) => {
+      const cid = c.product?._id || c.product?.id || c._id || c.id;
+      const cmodel = c._cartModel || c.model || (c.category ? 'Accessory' : 'Product');
+      return String(cid) === String(prodId) && cmodel === model;
+    }));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
+  };
+  const handleRemoveFromCart = async () => {
+    if (!user || !user.email) {
+      setAuthModalReason("cart");
+      setShowAuthModal(true);
+      return;
+    }
+    const model = getModel(accessory);
+    const prodId = accessory._id || accessory.id;
+    try {
+      const api = await import('../utils/api');
+      await api.removeFromCart(prodId, user?.token, model);
+    } catch (err) {}
+    if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+    const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
+    const found = ((cartData && cartData.data) || []).some((c) => {
+      const cid = c.product?._id || c.product?.id || c._id || c.id;
+      const cmodel = c._cartModel || c.model || (c.category ? 'Accessory' : 'Product');
+      return String(cid) === String(prodId) && cmodel === model;
+    });
+    setIsInCart(found);
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
+  };
+  const handleAddToWishlist = async () => {
+    if (!user || !user.email) {
+      setAuthModalReason("wishlist");
+      setShowAuthModal(true);
+      return;
+    }
+    const model = getModel(accessory);
+    const prodId = accessory._id || accessory.id;
+    await updateWishlist(prodId, "add", user?.token, model);
+    if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+    const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
+    setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+      const wid = w._id || w.id;
+      const wmodel = w._wishlistModel || w.model || (w.category ? 'Accessory' : 'Product');
+      return String(wid) === String(prodId) && wmodel === model;
+    }));
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
+  };
+  const handleRemoveFromWishlist = async () => {
+    if (!user || !user.email) {
+      setAuthModalReason("wishlist");
+      setShowAuthModal(true);
+      return;
+    }
+    const model = getModel(accessory);
+    const prodId = accessory._id || accessory.id;
+    try {
+      await updateWishlist(prodId, "remove", user?.token, model);
+    } catch (err) {}
+    if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+    const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
+    const found = ((wishlistData && wishlistData.data) || []).some((w) => {
+      const wid = w._id || w.id;
+      const wmodel = w._wishlistModel || w.model || (w.category ? 'Accessory' : 'Product');
+      return String(wid) === String(prodId) && wmodel === model;
+    });
+    setIsInWishlist(found);
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
+  };
 
-
-  if (!accessory) {
-    return (
-      <div className="p-8 text-center">Accessory not found.</div>
-    );
-  }
-
-  if (!accessory) {
-    return (
-      <div className="p-8 text-center">Accessory not found.</div>
-    );
-  }
-
-  // Calculate inCart and inWishlist using the same logic as Accessories.jsx
-  const idToCheck = accessory?._id || accessory?.id;
-  const inCart = cart.some((c) => {
-    const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
-    const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
-    return String(cid) === String(idToCheck) && cmodel === 'Accessory';
-  });
-  const inWishlist = wishlist.some((w) => {
-    const wid = w._id || w.id;
-    const wmodel = w._wishlistModel || (w.category ? 'Product' : 'Accessory');
-    return String(wid) === String(idToCheck) && wmodel === 'Accessory';
-  });
+  if (!accessory) return <div className="p-8 text-center">Accessory not found.</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-8 relative transition-all duration-500">
+    <React.Fragment>
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} reason={authModalReason} />
+      )}
+      <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-8 relative transition-all duration-500">
       {/* Accessory Section */}
       <div className="flex flex-col md:flex-row gap-10 items-center md:items-center justify-center">
         {/* Accessory Image & Thumbnails */}
@@ -213,9 +256,7 @@ export default function AccessoriesDetailsPage() {
                   key={idx}
                   src={img}
                   alt={`${accessory.name} ${idx + 1}`}
-                  className={`w-16 h-16 object-contain rounded-lg cursor-pointer border-2 transition-all duration-300 ${
-                    mainImage === img ? "border-blue-500 scale-110 shadow-lg" : "border-gray-200 hover:border-blue-400 hover:scale-105"
-                  }`}
+                  className={`w-16 h-16 object-contain rounded-lg cursor-pointer border-2 transition-all duration-300 ${mainImage === img ? "border-blue-500 scale-110 shadow-lg" : "border-gray-200 hover:border-blue-400 hover:scale-105"}`}
                   onClick={() => setMainImage(img)}
                   style={{ transition: 'box-shadow 0.3s, transform 0.3s' }}
                 />
@@ -249,19 +290,7 @@ export default function AccessoriesDetailsPage() {
             )}
           </div>
           <div className="mb-3 flex flex-col items-center md:items-start">
-            {accessory.stock > 0 && (
-              <span className="flex items-center gap-3 font-extrabold text-lg px-5 py-2 rounded-full mb-2 bg-green-600 text-white shadow-xl animate-pulse border-2 border-green-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                In Stock
-                <span className="ml-2 text-white text-base font-bold">({accessory.stock})</span>
-              </span>
-            )}
-            {accessory.stock <= 0 && (
-              <span className="flex items-center gap-2 font-semibold text-sm px-3 py-1 rounded-full mb-2 bg-red-100 text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                Out of Stock
-              </span>
-            )}
+            {/* Stock display removed as per request */}
             <label className="mr-2 font-semibold">Amount:</label>
             <input
               type="number"
@@ -273,77 +302,44 @@ export default function AccessoriesDetailsPage() {
           </div>
           <div className="flex gap-2 items-center justify-center md:justify-start mt-2">
             <button
-              onClick={async () => {
-                if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
-                if (inCart) {
-                  const api = await import('../utils/api');
-                  await api.removeFromCart(accessory._id, user?.token, 'Accessory');
-                  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-                  const cartData = await fetchCart(user._id);
-                  setCart((cartData && cartData.data) || []);
-                  setIsInCart(((cartData && cartData.data) || []).some((c) => {
-                    const cid = c.product?._id || c.product?.id || c._id || c.id;
-                    const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-                    return cid === accessory._id && cmodel === 'Accessory';
-                  }));
-                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+              onClick={() => {
+                if (!user ) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+                if (isInCart) {
+                  handleRemoveFromCart();
                 } else {
-                  await updateCart(accessory._id, user?.token, 'Accessory');
-                  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-                  const cartData = await fetchCart(user._id);
-                  setCart((cartData && cartData.data) || []);
-                  setIsInCart(((cartData && cartData.data) || []).some((c) => {
-                    const cid = c.product?._id || c.product?.id || c._id || c.id;
-                    const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-                    return cid === accessory._id && cmodel === 'Accessory';
-                  }));
-                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                  handleAddToCart();
                 }
               }}
-              className={`px-5 py-2 rounded-lg transition font-semibold shadow-md ${inCart ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
+              className={`px-5 py-2 rounded-lg transition font-semibold shadow-md ${isInCart ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
             >
-              {inCart ? 'Remove from Cart' : 'Add to Cart'}
+              {isInCart ? 'Remove from Cart' : 'Add to Cart'}
             </button>
             <button
               onClick={() => {
-                if (!user || !user.email) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                if (!user) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                else{
                 handleOrder();
+                }
               }}
               className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
             >
               Order Now
             </button>
             <button
-              onClick={async () => {
-                if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
-                if (inWishlist) {
-                  await updateWishlist(accessory._id, "remove", user?.token, 'Accessory');
-                  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-                  const wishlistData = await fetchWishlist(user._id);
-                  setWishlist((wishlistData && wishlistData.data) || []);
-                  setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
-                    const wid = w._id || w.id;
-                    const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-                    return wid === accessory._id && wmodel === 'Accessory';
-                  }));
-                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+              onClick={() => {
+                if (!user ) { 
+                  setAuthModalReason("wishlist"); setShowAuthModal(true);
+                   return; }
+                if (isInWishlist) {
+                  handleRemoveFromWishlist();
                 } else {
-                  await updateWishlist(accessory._id, "add", user?.token, 'Accessory');
-                  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-                  const wishlistData = await fetchWishlist(user._id);
-                  setWishlist((wishlistData && wishlistData.data) || []);
-                  setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
-                    const wid = w._id || w.id;
-                    const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-                    return wid === accessory._id && wmodel === 'Accessory';
-                  }));
-                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                  handleAddToWishlist();
                 }
               }}
               className="ml-2 p-2 rounded-full border border-pink-500 bg-white hover:bg-pink-100 transition shadow-md"
-              title={inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              title={isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
             >
-              {inWishlist ? (
+              {isInWishlist ? (
                 <FaHeart className="text-pink-500" size={22} />
               ) : (
                 <FaRegHeart className="text-pink-500" size={22} />
@@ -364,7 +360,8 @@ export default function AccessoriesDetailsPage() {
             <span className="ml-2 text-base text-gray-700 font-semibold">{avgRating ? avgRating : 0}/5</span>
           </span>
         </h3>
-        {/* Star Distribution Progress Bars */}
+
+        {/* Modern UI: Star Distribution Progress Bars */}
         <div className="mb-6 max-w-md">
           {[5,4,3,2,1].map(star => {
             const count = reviews.filter(r => r.value === star).length;
@@ -408,7 +405,7 @@ export default function AccessoriesDetailsPage() {
               className="w-full border rounded p-2 mb-2"
               rows={2}
             />
-            <button onClick={() => handleAddReview({ user, userRating, userReview, id, setShowToast, setUserReview, setAccessory, setRatingCount, setAvgRating, setReviews })} className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 font-semibold">Submit Review</button>
+            <button onClick={handleAddReview} className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 font-semibold">Submit Review</button>
           </div>
         ) : (
           <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">Log in to add a review.</div>
@@ -456,85 +453,27 @@ export default function AccessoriesDetailsPage() {
         <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
           {related.map((item) => {
-            // Always use detailsPath='accessory' for accessories
             const isAccessory = (item.model && item.model.toLowerCase() === 'accessory')
               || (item.type && item.type.toLowerCase() === 'accessory')
-              || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty')) // likely accessory
+              || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty'))
               || (item.category && item.category.toLowerCase().includes('accessor'));
-            // Calculate inCart/inWishlist for each item
-            const itemId = item._id || item.id;
-            // Find the actual cart/wishlist model and id for this item
-            // Robustly detect model for each item
-            let cartModel = 'Product';
-            if (item.model) {
-              cartModel = item.model;
-            } else if (item.type && item.type.toLowerCase() === 'accessory') {
-              cartModel = 'Accessory';
-            } else if (item.category && item.category.toLowerCase().includes('accessor')) {
-              cartModel = 'Accessory';
-            }
-            // Try to match the cart entry by both id and model
-            const itemInCart = cart.some((c) => {
-              const cid = c.product?._id || c.product?.id || c._id || c.id;
-              const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
-              return String(cid) === String(itemId) && cmodel === cartModel;
-            });
-            const itemInWishlist = wishlist.some((w) => {
-              const wid = w._id || w.id;
-              const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
-              return String(wid) === String(itemId) && wmodel === cartModel;
-            });
-            // Handler wrappers for each item, always use correct model and id
-            const handleAddToCart = async () => {
-              if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
-              await updateCart(itemId, user?.token, cartModel);
-              if (!user || !user._id) { setCart([]); return; }
-              const cartData = await fetchCart(user._id);
-              setCart((cartData && cartData.data) || []);
-              window.dispatchEvent(new Event('cartWishlistUpdated'));
-            };
-            const handleRemoveFromCart = async () => {
-              if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
-              const api = await import('../utils/api');
-              await api.removeFromCart(itemId, user?.token, cartModel);
-              if (!user || !user._id) { setCart([]); return; }
-              const cartData = await fetchCart(user._id);
-              setCart((cartData && cartData.data) || []);
-              window.dispatchEvent(new Event('cartWishlistUpdated'));
-            };
-            const handleAddToWishlist = async () => {
-              if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
-              await updateWishlist(itemId, "add", user?.token, cartModel);
-              if (!user || !user._id) { setWishlist([]); return; }
-              const wishlistData = await fetchWishlist(user._id);
-              setWishlist((wishlistData && wishlistData.data) || []);
-              window.dispatchEvent(new Event('cartWishlistUpdated'));
-            };
-            const handleRemoveFromWishlist = async () => {
-              if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
-              await updateWishlist(itemId, "remove", user?.token, cartModel);
-              if (!user || !user._id) { setWishlist([]); return; }
-              const wishlistData = await fetchWishlist(user._id);
-              setWishlist((wishlistData && wishlistData.data) || []);
-              window.dispatchEvent(new Event('cartWishlistUpdated'));
-            };
             return (
               <ProductCard
-                key={itemId}
+                key={item._id || item.id}
                 product={item}
                 detailsPath={isAccessory ? 'accessory' : 'productdetails'}
                 showActions={!!user}
-                inCart={itemInCart}
-                inWishlist={itemInWishlist}
-                onAddToCart={handleAddToCart}
-                onRemoveFromCart={handleRemoveFromCart}
-                onAddToWishlist={handleAddToWishlist}
-                onRemoveFromWishlist={handleRemoveFromWishlist}
               />
             );
           })}
         </div>
       </div>
+       {showAuthModal && (
+              <AuthModal onClose={() => setShowAuthModal(false)} reason={authModalReason} />
+            )}
     </div>
+    </React.Fragment>
   );
 }
+
+export default AccessoriesDetailsPage;

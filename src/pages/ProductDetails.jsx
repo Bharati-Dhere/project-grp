@@ -258,7 +258,11 @@ function ProductDetails() {
   if (!product) return <div className="p-8 text-center">Product not found.</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-8 relative transition-all duration-500">
+    <React.Fragment>
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} reason={authModalReason} />
+      )}
+      <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-8 relative transition-all duration-500">
       {/* Product Section */}
       <div className="flex flex-col md:flex-row gap-10 items-center md:items-center justify-center">
         {/* Product Image & Thumbnails */}
@@ -315,19 +319,7 @@ function ProductDetails() {
             )}
           </div>
           <div className="mb-3 flex flex-col items-center md:items-start">
-            {product.stock > 0 && (
-              <span className="flex items-center gap-3 font-extrabold text-lg px-5 py-2 rounded-full mb-2 bg-green-600 text-white shadow-xl animate-pulse border-2 border-green-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                In Stock
-                <span className="ml-2 text-white text-base font-bold">({product.stock})</span>
-              </span>
-            )}
-            {product.stock <= 0 && (
-              <span className="flex items-center gap-2 font-semibold text-sm px-3 py-1 rounded-full mb-2 bg-red-100 text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                Out of Stock
-              </span>
-            )}
+            {/* Stock display removed as per request */}
             <label className="mr-2 font-semibold">Amount:</label>
             <input
               type="number"
@@ -340,7 +332,7 @@ function ProductDetails() {
           <div className="flex gap-2 items-center justify-center md:justify-start mt-2">
             <button
               onClick={() => {
-                if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+                if (!user ) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
                 if (isInCart) {
                   handleRemoveFromCart();
                 } else {
@@ -353,8 +345,10 @@ function ProductDetails() {
             </button>
             <button
               onClick={() => {
-                if (!user || !user.email) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                if (!user) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                else{
                 handleOrder();
+                }
               }}
               className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
             >
@@ -362,7 +356,9 @@ function ProductDetails() {
             </button>
             <button
               onClick={() => {
-                if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+                if (!user ) { 
+                  setAuthModalReason("wishlist"); setShowAuthModal(true);
+                   return; }
                 if (isInWishlist) {
                   handleRemoveFromWishlist();
                 } else {
@@ -502,7 +498,11 @@ function ProductDetails() {
           })}
         </div>
       </div>
+       {showAuthModal && (
+              <AuthModal onClose={() => setShowAuthModal(false)} reason={authModalReason} />
+            )}
     </div>
+    </React.Fragment>
   );
 }
 
