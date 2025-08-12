@@ -1,16 +1,24 @@
 // Remove from cart
 exports.removeFromCart = async (req, res) => {
   try {
-    const { productId, model } = req.body;
-    if (!productId || !model) return res.status(400).json({ success: false, message: 'Product ID and model required' });
+    const { product, model } = req.body;
+    if (!product || !model) return res.status(400).json({ success: false, message: 'Product ID and model required' });
     const user = req.user;
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    console.log('removeFromCart called with:', { product, model });
+    console.log('User cart before:', JSON.stringify(user.cart));
     const initialLength = user.cart.length;
-    user.cart = user.cart.filter(item => !(item.product.equals(productId) && item.model === model));
+    user.cart = user.cart.filter(item => {
+      const match = item.product.equals(product) && item.model === model;
+      if (match) console.log('Removing cart item:', item);
+      return !match;
+    });
     if (user.cart.length === initialLength) {
+      console.log('No matching item found to remove.');
       return res.status(404).json({ success: false, message: 'Item not found in cart' });
     }
     await user.save();
+    console.log('User cart after:', JSON.stringify(user.cart));
     res.json({ success: true, message: 'Removed from cart', data: user.cart });
   } catch (err) {
     console.error('Error in removeFromCart:', err);

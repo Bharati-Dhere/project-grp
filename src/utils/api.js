@@ -4,7 +4,8 @@ import axios from 'axios';
 // model should be 'Product' or 'Accessory'
 export const removeFromCart = async (productId, userToken, model) => {
   if (!model) throw new Error('Model type (Product or Accessory) is required for cart actions');
-  const res = await axios.post(`${API_BASE}/cart/remove`, { productId, model }, {
+  // Backend expects { product, model }
+  const res = await axios.post(`${API_BASE}/cart/remove`, { product: productId, model }, {
     withCredentials: true,
     headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
   });
@@ -146,6 +147,7 @@ export const updateWishlist = async (productId, action, userToken, model) => {
     });
     return res.data;
   } else if (action === "remove") {
+    // Always send { productId, model } for wishlist remove
     const res = await axios.post(`${API_BASE}/wishlist/remove`, { productId, model }, {
       withCredentials: true,
       headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},

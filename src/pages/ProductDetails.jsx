@@ -33,6 +33,9 @@ function ProductDetails() {
   // Helper to get model type
   const getModel = (prod) => {
     if (!prod) return 'Product';
+    // Robust: check for explicit model, type, or category
+    if (prod.model) return prod.model;
+    if (prod.type && prod.type.toLowerCase() === 'accessory') return 'Accessory';
     if (prod.category && prod.category.toLowerCase().includes('accessor')) return 'Accessory';
     return 'Product';
   };
@@ -148,15 +151,17 @@ function ProductDetails() {
       return;
     }
     const model = getModel(product);
-    await updateCart(product._id || product.id, user?.token, model);
+    const prodId = product._id || product.id;
+    console.log('[AddToCart] Sending:', { prodId, model, user: user?.email });
+    await updateCart(prodId, user?.token, model);
     // Always reload cart from backend for true state
-  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-  const cartData = await fetchCart(user._id);
+    if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+    const cartData = await fetchCart(user._id);
     setCart((cartData && cartData.data) || []);
     setIsInCart(((cartData && cartData.data) || []).some((c) => {
       const cid = c.product?._id || c.product?.id || c._id || c.id;
-      const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-      return cid === (product._id || product.id) && cmodel === model;
+      const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+      return String(cid) === String(prodId) && cmodel === model;
     }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
@@ -167,19 +172,29 @@ function ProductDetails() {
       return;
     }
     const model = getModel(product);
+    const prodId = product._id || product.id;
+    // Log cart contents and outgoing values
+    console.log('[RemoveFromCart] Cart contents:', cart);
+    console.log('[RemoveFromCart] Attempting to remove:', { prodId, model, user: user?.email });
     // Remove from cart robustly
     try {
       const api = await import('../utils/api');
-      await api.removeFromCart(product._id || product.id, user?.token, model);
-    } catch {}
-  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-  const cartData = await fetchCart(user._id);
+      await api.removeFromCart(prodId, user?.token, model);
+    } catch (err) {
+      console.error('[RemoveFromCart] Error:', err);
+    }
+    if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+    const cartData = await fetchCart(user._id);
     setCart((cartData && cartData.data) || []);
-    setIsInCart(((cartData && cartData.data) || []).some((c) => {
+    // Robust id/model comparison
+    const found = ((cartData && cartData.data) || []).some((c) => {
       const cid = c.product?._id || c.product?.id || c._id || c.id;
-      const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-      return cid === (product._id || product.id) && cmodel === model;
-    }));
+      const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+      const match = String(cid) === String(prodId) && cmodel === model;
+      if (match) console.log('[RemoveFromCart] Still found in cart:', { cid, cmodel });
+      return match;
+    });
+    setIsInCart(found);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleAddToWishlist = async () => {
@@ -189,15 +204,17 @@ function ProductDetails() {
       return;
     }
     const model = getModel(product);
-    await updateWishlist(product._id || product.id, "add", user?.token, model);
+    const prodId = product._id || product.id;
+    console.log('[AddToWishlist] Sending:', { prodId, model, user: user?.email });
+    await updateWishlist(prodId, "add", user?.token, model);
     // Always reload wishlist from backend for true state
-  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-  const wishlistData = await fetchWishlist(user._id);
+    if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+    const wishlistData = await fetchWishlist(user._id);
     setWishlist((wishlistData && wishlistData.data) || []);
     setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
       const wid = w._id || w.id;
-      const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-      return wid === (product._id || product.id) && wmodel === model;
+      const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
+      return String(wid) === String(prodId) && wmodel === model;
     }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
@@ -208,15 +225,25 @@ function ProductDetails() {
       return;
     }
     const model = getModel(product);
-    await updateWishlist(product._id || product.id, "remove", user?.token, model);
-  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-  const wishlistData = await fetchWishlist(user._id);
+    const prodId = product._id || product.id;
+    try {
+      console.log('[RemoveFromWishlist] Attempting to remove:', { prodId, model, user: user?.email });
+      await updateWishlist(prodId, "remove", user?.token, model);
+    } catch (err) {
+      console.error('[RemoveFromWishlist] Error:', err);
+    }
+    if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+    const wishlistData = await fetchWishlist(user._id);
     setWishlist((wishlistData && wishlistData.data) || []);
-    setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+    // Robust id/model comparison
+    const found = ((wishlistData && wishlistData.data) || []).some((w) => {
       const wid = w._id || w.id;
-      const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-      return wid === (product._id || product.id) && wmodel === model;
-    }));
+      const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
+      const match = String(wid) === String(prodId) && wmodel === model;
+      if (match) console.log('[RemoveFromWishlist] Still found in wishlist:', { wid, wmodel });
+      return match;
+    });
+    setIsInWishlist(found);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { fetchProducts, fetchAccessories, fetchCart, fetchWishlist, updateCart, updateWishlist } from '../utils/api';
@@ -5,6 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import { FaHeart, FaRegHeart, FaStar } from 'react-icons/fa';
 import AuthModal from '../components/AuthModal';
 import ProductCard from '../components/ProductCard';
+
+// Add review handler (placeholder, implement as needed)
+const handleAddReview = async () => {
+  // TODO: Implement review submission logic
+  alert('Review submitted! (Implement logic)');
+};
 
 export default function AccessoriesDetailsPage() {
   const { id } = useParams();
@@ -96,105 +103,10 @@ export default function AccessoriesDetailsPage() {
         setAccessory(null);
       }
     }
+
     fetchAll();
     // eslint-disable-next-line
   }, [id, user]);
-
-  const handleAddReview = async () => {
-    if (!user || !user.email) {
-      setAuthModalReason("review");
-      setShowAuthModal(true);
-      return;
-    }
-    try {
-      await fetch(`http://localhost:5000/api/accessory/${id}/rate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: user.email, value: userRating, review: userReview })
-      });
-      setShowToast(true);
-      setUserReview("");
-      setTimeout(() => setShowToast(false), 3000);
-      // Refetch accessory to update rating and reviews
-      const res = await fetch(`http://localhost:5000/api/accessory/${id}`);
-      const data = await res.json();
-      setAccessory(data);
-      setRatingCount(data.ratingCount || 0);
-      setAvgRating(data.avgRating || null);
-      setReviews(data.reviews || []);
-      // Dispatch event to trigger refresh in other components
-      window.dispatchEvent(new Event('reviewSubmitted'));
-    } catch (err) {
-      alert("Error submitting review");
-    }
-  };
-
-
-  // Cart/Wishlist handlers using backend (robust for both models)
-  const handleAddToCart = async () => {
-    if (!user || !user.email) {
-      setAuthModalReason("cart");
-      setShowAuthModal(true);
-      return;
-    }
-    try {
-      await updateCart(accessory._id, user?.token, 'Accessory');
-      if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-      const cartData = await fetchCart(user._id);
-      setCart((cartData && cartData.data) || []);
-      setIsInCart(((cartData && cartData.data) || []).some((c) => {
-        const cid = c.product?._id || c.product?.id || c._id || c.id;
-        const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-        return cid === accessory._id && cmodel === 'Accessory';
-      }));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } catch (err) {
-      alert('Error adding to cart: ' + (err?.response?.data?.message || err.message));
-    }
-  };
-  const handleRemoveFromCart = async () => {
-    if (!user || !user.email) {
-      setAuthModalReason("cart");
-      setShowAuthModal(true);
-      return;
-    }
-    try {
-      const api = await import('../utils/api');
-      await api.removeFromCart(accessory._id, user?.token, 'Accessory');
-      if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
-      const cartData = await fetchCart(user._id);
-      setCart((cartData && cartData.data) || []);
-      setIsInCart(((cartData && cartData.data) || []).some((c) => {
-        const cid = c.product?._id || c.product?.id || c._id || c.id;
-        const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
-        return cid === accessory._id && cmodel === 'Accessory';
-      }));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } catch (err) {
-      alert('Error removing from cart: ' + (err?.response?.data?.message || err.message));
-    }
-  };
-  const handleAddToWishlist = async () => {
-    if (!user || !user.email) {
-      setAuthModalReason("wishlist");
-      setShowAuthModal(true);
-      return;
-    }
-    try {
-      await updateWishlist(accessory._id, "add", user?.token, 'Accessory');
-      if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
-      const wishlistData = await fetchWishlist(user._id);
-      setWishlist((wishlistData && wishlistData.data) || []);
-      setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
-        const wid = w._id || w.id;
-        const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
-        return wid === accessory._id && wmodel === 'Accessory';
-      }));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } catch (err) {
-      alert('Error adding to wishlist: ' + (err?.response?.data?.message || err.message));
-    }
-  };
   const handleRemoveFromWishlist = async () => {
     if (!user || !user.email) {
       setAuthModalReason("wishlist");
@@ -335,7 +247,34 @@ export default function AccessoriesDetailsPage() {
           </div>
           <div className="flex gap-2 items-center justify-center md:justify-start mt-2">
             <button
-              onClick={inCart ? handleRemoveFromCart : handleAddToCart}
+              onClick={async () => {
+                if (inCart) {
+                  if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+                  const api = await import('../utils/api');
+                  await api.removeFromCart(accessory._id, user?.token, 'Accessory');
+                  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+                  const cartData = await fetchCart(user._id);
+                  setCart((cartData && cartData.data) || []);
+                  setIsInCart(((cartData && cartData.data) || []).some((c) => {
+                    const cid = c.product?._id || c.product?.id || c._id || c.id;
+                    const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+                    return cid === accessory._id && cmodel === 'Accessory';
+                  }));
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                } else {
+                  if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+                  await updateCart(accessory._id, user?.token, 'Accessory');
+                  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+                  const cartData = await fetchCart(user._id);
+                  setCart((cartData && cartData.data) || []);
+                  setIsInCart(((cartData && cartData.data) || []).some((c) => {
+                    const cid = c.product?._id || c.product?.id || c._id || c.id;
+                    const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+                    return cid === accessory._id && cmodel === 'Accessory';
+                  }));
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                }
+              }}
               className={`px-5 py-2 rounded-lg transition font-semibold shadow-md ${inCart ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
             >
               {inCart ? 'Remove from Cart' : 'Add to Cart'}
@@ -347,7 +286,33 @@ export default function AccessoriesDetailsPage() {
               Order Now
             </button>
             <button
-              onClick={inWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+              onClick={async () => {
+                if (inWishlist) {
+                  if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+                  await updateWishlist(accessory._id, "remove", user?.token, 'Accessory');
+                  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+                  const wishlistData = await fetchWishlist(user._id);
+                  setWishlist((wishlistData && wishlistData.data) || []);
+                  setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+                    const wid = w._id || w.id;
+                    const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+                    return wid === accessory._id && wmodel === 'Accessory';
+                  }));
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                } else {
+                  if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+                  await updateWishlist(accessory._id, "add", user?.token, 'Accessory');
+                  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+                  const wishlistData = await fetchWishlist(user._id);
+                  setWishlist((wishlistData && wishlistData.data) || []);
+                  setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+                    const wid = w._id || w.id;
+                    const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+                    return wid === accessory._id && wmodel === 'Accessory';
+                  }));
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
+                }
+              }}
               className="ml-2 p-2 rounded-full border border-pink-500 bg-white hover:bg-pink-100 transition shadow-md"
               title={inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
             >
@@ -469,12 +434,75 @@ export default function AccessoriesDetailsPage() {
               || (item.type && item.type.toLowerCase() === 'accessory')
               || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty')) // likely accessory
               || (item.category && item.category.toLowerCase().includes('accessor'));
+            // Calculate inCart/inWishlist for each item
+            const itemId = item._id || item.id;
+            // Find the actual cart/wishlist model and id for this item
+            // Robustly detect model for each item
+            let cartModel = 'Product';
+            if (item.model) {
+              cartModel = item.model;
+            } else if (item.type && item.type.toLowerCase() === 'accessory') {
+              cartModel = 'Accessory';
+            } else if (item.category && item.category.toLowerCase().includes('accessor')) {
+              cartModel = 'Accessory';
+            }
+            // Try to match the cart entry by both id and model
+            const itemInCart = cart.some((c) => {
+              const cid = c.product?._id || c.product?.id || c._id || c.id;
+              const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+              return String(cid) === String(itemId) && cmodel === cartModel;
+            });
+            const itemInWishlist = wishlist.some((w) => {
+              const wid = w._id || w.id;
+              const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
+              return String(wid) === String(itemId) && wmodel === cartModel;
+            });
+            // Handler wrappers for each item, always use correct model and id
+            const handleAddToCart = async () => {
+              if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+              await updateCart(itemId, user?.token, cartModel);
+              if (!user || !user._id) { setCart([]); return; }
+              const cartData = await fetchCart(user._id);
+              setCart((cartData && cartData.data) || []);
+              window.dispatchEvent(new Event('cartWishlistUpdated'));
+            };
+            const handleRemoveFromCart = async () => {
+              if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+              const api = await import('../utils/api');
+              await api.removeFromCart(itemId, user?.token, cartModel);
+              if (!user || !user._id) { setCart([]); return; }
+              const cartData = await fetchCart(user._id);
+              setCart((cartData && cartData.data) || []);
+              window.dispatchEvent(new Event('cartWishlistUpdated'));
+            };
+            const handleAddToWishlist = async () => {
+              if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+              await updateWishlist(itemId, "add", user?.token, cartModel);
+              if (!user || !user._id) { setWishlist([]); return; }
+              const wishlistData = await fetchWishlist(user._id);
+              setWishlist((wishlistData && wishlistData.data) || []);
+              window.dispatchEvent(new Event('cartWishlistUpdated'));
+            };
+            const handleRemoveFromWishlist = async () => {
+              if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+              await updateWishlist(itemId, "remove", user?.token, cartModel);
+              if (!user || !user._id) { setWishlist([]); return; }
+              const wishlistData = await fetchWishlist(user._id);
+              setWishlist((wishlistData && wishlistData.data) || []);
+              window.dispatchEvent(new Event('cartWishlistUpdated'));
+            };
             return (
               <ProductCard
-                key={item._id || item.id}
+                key={itemId}
                 product={item}
                 detailsPath={isAccessory ? 'accessory' : 'productdetails'}
                 showActions={!!user}
+                inCart={itemInCart}
+                inWishlist={itemInWishlist}
+                onAddToCart={handleAddToCart}
+                onRemoveFromCart={handleRemoveFromCart}
+                onAddToWishlist={handleAddToWishlist}
+                onRemoveFromWishlist={handleRemoveFromWishlist}
               />
             );
           })}
