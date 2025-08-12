@@ -1,11 +1,11 @@
 import React from 'react';
-// import aboutBg from '../assets/about-us.jpeg';
+import aboutBg from '../assets/about-us.jpeg';
 
 function About() {
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat text-white px-4 md:px-8 py-12"
-      // style={{ backgroundImage: `url(${aboutBg})` }}
+      style={{ backgroundImage: `url(${aboutBg})` }}
     >
       {/* Overlay for better contrast */}
       <div className="bg-black/60 backdrop-blur-sm min-h-screen flex flex-col items-center justify-center px-4 py-10">

@@ -248,8 +248,20 @@ export default function Profile() {
         avatar: avatar,
         notifications: notifications
       };
-  const updated = await updateUserProfile(user._id || user.id, profileUpdate);
-      setProfile(updated.data || updated);
+      await updateUserProfile(user._id || user.id, profileUpdate);
+      // Re-fetch profile and orders after update
+      const profileRes = await fetchUserProfile(user._id || user.id);
+      const userData = profileRes.data || profileRes;
+      setProfile(userData);
+      setForm({
+        ...userData.profile,
+        email: userData.email,
+        phone: userData.profile?.phone || userData.phone || ""
+      });
+      setAvatar(userData.profile?.avatar || null);
+      setNotifications(userData.profile?.notifications || false);
+      const ordersData = await fetchOrders();
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
       setEditMode(false);
       toast.success("Profile updated");
     } catch (err) {
@@ -423,6 +435,7 @@ export default function Profile() {
                 </div>
                 <input type="text" name="name" value={form.name || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Name" />
                 {errors.name && <p className="text-red-500 text-xs mb-1">{errors.name}</p>}
+                <input type="number" name="age" value={form.age || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Age" min={0} />
                 <input type="email" name="email" value={user.email || ""} readOnly className="border px-2 py-1 rounded w-full mb-2 bg-gray-100 cursor-not-allowed" placeholder="Email (read-only)" />
                 {errors.email && <p className="text-red-500 text-xs mb-1">{errors.email}</p>}
                 <input type="text" name="phone" value={form.phone || form.mobile || ""} onChange={handleInputChange} className="border px-2 py-1 rounded w-full mb-2" placeholder="Mobile" />
@@ -459,6 +472,7 @@ export default function Profile() {
               <>
                 <h2 className="text-2xl font-bold mb-1">{user?.name || ''}</h2>
                 <p className="text-gray-600 mb-1"><span className="font-semibold">Email:</span> {user?.email || ''}</p>
+                <p className="text-gray-600 mb-1"><span className="font-semibold">Age:</span> {user?.profile?.age || ''}</p>
                 <p className="text-gray-600 mb-1"><span className="font-semibold">Phone:</span> {user?.phone || ''}</p>
                 <p className="text-gray-600 mb-1"><span className="font-semibold">Address:</span> {user?.address || ''}</p>
                 <p className="text-gray-600 mb-1"><span className="font-semibold">City:</span> {user?.city || ''}</p>

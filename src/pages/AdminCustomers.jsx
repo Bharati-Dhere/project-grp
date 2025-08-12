@@ -55,10 +55,13 @@ export default function AdminCustomers() {
         <div className="bg-white p-4 rounded shadow mb-6">
           <h2 className="text-lg font-semibold mb-2">Profile Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 mb-2">
-            <p><strong>Name:</strong> {selectedUser.name}</p>
+            <p><strong>Name:</strong> {selectedUser.name || selectedUser.profile?.name || ''}</p>
+            <p><strong>Age:</strong> {selectedUser.profile?.age || ''}</p>
             <p><strong>Email:</strong> {selectedUser.email}</p>
+            <p><strong>Mobile:</strong> {selectedUser.profile?.phone || selectedUser.phone || ''}</p>
+            <p><strong>Address:</strong> {selectedUser.profile?.address || ''}</p>
+            <p><strong>Gender:</strong> {selectedUser.profile?.gender || ''}</p>
             <p><strong>Password Status:</strong> {selectedUser.password === "clerk" ? "Password not set" : "Password set"}</p>
-            {/* Address, Gender, Notifications may not exist in schema */}
           </div>
           <h3 className="font-semibold mt-4 mb-2">Order History <span className='text-xs text-blue-600'>(Total: {orders.filter(o => o.user && o.user.email === selectedUser.email).length})</span></h3>
           <ul className="space-y-1 mb-2">
@@ -76,7 +79,9 @@ export default function AdminCustomers() {
               if(window.confirm('Are you sure you want to delete this user?')) {
                 try {
                   await axios.delete(`/api/admin/users/${selectedUser._id}`, { withCredentials: true });
-                  setUsers(users.filter(u => u._id !== selectedUser._id));
+                  // Re-fetch users after delete
+                  const usersRes = await axios.get("/api/users", { withCredentials: true });
+                  setUsers(Array.isArray(usersRes.data.data) ? usersRes.data.data : []);
                   setSelectedUser(null);
                 } catch {}
               }
