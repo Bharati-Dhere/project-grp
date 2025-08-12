@@ -30,6 +30,13 @@ function ProductDetails() {
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
 
+  // Helper to get model type
+  const getModel = (prod) => {
+    if (!prod) return 'Product';
+    if (prod.category && prod.category.toLowerCase().includes('accessor')) return 'Accessory';
+    return 'Product';
+  };
+
   // Fetch product, reviews, related, cart, wishlist
   useEffect(() => {
     async function fetchAll() {
@@ -62,18 +69,32 @@ function ProductDetails() {
         setProduct(null);
       }
       // Cart & Wishlist from backend
-      try {
-        const cartData = await fetchCart();
-        setCart(cartData || []);
-        setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === id));
-      } catch {}
-      try {
-        const wishlistData = await fetchWishlist();
-        setWishlist(wishlistData || []);
-        setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === id));
-      } catch {}
+      if (user && user._id) {
+        try {
+          const cartData = await fetchCart(user._id);
+          setCart((cartData && cartData.data) || []);
+          setIsInCart(((cartData && cartData.data) || []).some((c) => {
+            const cid = c.product?._id || c.product?.id || c._id || c.id;
+            const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+            return cid === id && cmodel === getModel(product);
+          }));
+        } catch { setCart([]); setIsInCart(false); }
+        try {
+          const wishlistData = await fetchWishlist(user._id);
+          setWishlist((wishlistData && wishlistData.data) || []);
+          setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+            const wid = w._id || w.id;
+            const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+            return wid === id && wmodel === getModel(product);
+          }));
+        } catch { setWishlist([]); setIsInWishlist(false); }
+      } else {
+        setCart([]); setIsInCart(false);
+        setWishlist([]); setIsInWishlist(false);
+      }
     }
     fetchAll();
+    // eslint-disable-next-line
   }, [id]);
 
   // Add review (rating + text)
@@ -116,19 +137,25 @@ function ProductDetails() {
     navigate("/ordernow", { state: { product, amount } });
   };
 
-  // Cart/Wishlist handlers using backend
+
+  // Cart/Wishlist handlers using backend (robust for both models)
   const handleAddToCart = async () => {
     if (!user || !user.email) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
     }
-    const updated = [...cart, { product: product._id || product.id, quantity: amount }];
-  await updateCart(product._id || product.id);
+    const model = getModel(product);
+    await updateCart(product._id || product.id, user?.token, model);
     // Always reload cart from backend for true state
-    const cartData = await fetchCart();
-    setCart(cartData || []);
-    setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === (product._id || product.id)));
+  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+  const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
+    setIsInCart(((cartData && cartData.data) || []).some((c) => {
+      const cid = c.product?._id || c.product?.id || c._id || c.id;
+      const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+      return cid === (product._id || product.id) && cmodel === model;
+    }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromCart = async () => {
@@ -137,11 +164,20 @@ function ProductDetails() {
       setShowAuthModal(true);
       return;
     }
-    const updated = cart.filter((c) => (c.product?._id || c.product?.id || c._id || c.id) !== (product._id || product.id));
-  // Remove from cart not supported in backend, so no call here
-    const cartData = await fetchCart();
-    setCart(cartData || []);
-    setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === (product._id || product.id)));
+    const model = getModel(product);
+    // Remove from cart robustly
+    try {
+      const api = await import('../utils/api');
+      await api.removeFromCart(product._id || product.id, user?.token, model);
+    } catch {}
+  if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
+  const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
+    setIsInCart(((cartData && cartData.data) || []).some((c) => {
+      const cid = c.product?._id || c.product?.id || c._id || c.id;
+      const cmodel = c.model || (c.category ? 'Product' : 'Accessory');
+      return cid === (product._id || product.id) && cmodel === model;
+    }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleAddToWishlist = async () => {
@@ -150,11 +186,17 @@ function ProductDetails() {
       setShowAuthModal(true);
       return;
     }
-    await updateWishlist(product._id || product.id, "add");
+    const model = getModel(product);
+    await updateWishlist(product._id || product.id, "add", user?.token, model);
     // Always reload wishlist from backend for true state
-    const wishlistData = await fetchWishlist();
-    setWishlist(wishlistData || []);
-    setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === (product._id || product.id)));
+  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+  const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
+    setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+      const wid = w._id || w.id;
+      const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+      return wid === (product._id || product.id) && wmodel === model;
+    }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromWishlist = async () => {
@@ -163,10 +205,16 @@ function ProductDetails() {
       setShowAuthModal(true);
       return;
     }
-    await updateWishlist(product._id || product.id, "remove");
-    const wishlistData = await fetchWishlist();
-    setWishlist(wishlistData || []);
-    setIsInWishlist((wishlistData || []).some((w) => (w._id || w.id) === (product._id || product.id)));
+    const model = getModel(product);
+    await updateWishlist(product._id || product.id, "remove", user?.token, model);
+  if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
+  const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
+    setIsInWishlist(((wishlistData && wishlistData.data) || []).some((w) => {
+      const wid = w._id || w.id;
+      const wmodel = w.model || (w.category ? 'Product' : 'Accessory');
+      return wid === (product._id || product.id) && wmodel === model;
+    }));
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
