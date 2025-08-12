@@ -1,4 +1,13 @@
+
 import axios from 'axios';
+// Remove from cart (single product)
+export const removeFromCart = async (productId, userToken) => {
+  const res = await axios.post(`${API_BASE}/cart/remove`, { productId }, {
+    withCredentials: true,
+    headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
+  });
+  return res.data;
+};
 
 // Cancel order (user)
 export const cancelOrder = async (orderId) => {

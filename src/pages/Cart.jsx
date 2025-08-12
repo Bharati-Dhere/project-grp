@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist, removeFromCart } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
@@ -51,7 +51,7 @@ export default function Cart() {
   const handleRemoveFromCart = async (id) => {
     if (!user || !user._id) return;
     try {
-      await updateCart(id, user.token, 'remove');
+      await removeFromCart(id, user.token);
       await reloadCart();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));

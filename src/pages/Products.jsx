@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist, removeFromCart } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 import FilterSidebar from "../components/FilterSidebar";
@@ -133,7 +133,9 @@ const Products = () => {
   };
 
   const handleRemoveFromCart = async (id) => {
-    // Remove from cart not supported in backend, so just reload cart from backend
+    if (!user) return;
+    await removeFromCart(id, user.token);
+    // Always reload cart from backend for true state
     const cartData = await fetchCart(user._id);
     setCart((cartData && cartData.data) || []);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
