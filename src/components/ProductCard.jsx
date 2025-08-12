@@ -1,4 +1,4 @@
-import defaultAvatar from '../assets/default-avatar.png';
+import defaultAvatar from '../assets/default-avtar.jpg';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaTrash, FaHeart, FaRegHeart } from "react-icons/fa";

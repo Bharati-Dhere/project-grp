@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useReviews } from '../context/ReviewContext';
 
 const AddReview = () => {
   const { addReview } = useReviews();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -21,8 +23,14 @@ const AddReview = () => {
     setError('');
     setLoading(true);
     try {
-      // Use 'text' instead of 'description' for user reviews
-      await addReview({ name, text: description, rating });
+      // Attach user avatar if available (prefer user.profile.avatar, fallback to user.avatar)
+      let avatar = undefined;
+      if (user?.profile && user.profile.avatar && user.profile.avatar.trim() !== '') {
+        avatar = user.profile.avatar;
+      } else if (user?.avatar && user.avatar.trim() !== '') {
+        avatar = user.avatar;
+      }
+      await addReview({ name, text: description, rating, avatar });
       setName('');
       setDescription('');
       setRating(0);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { fetchUserProfile, updateUserProfile, fetchOrders } from '../utils/api';
-import defaultAvatar from '../assets/default-avatar.png';
+import defaultAvatar from '../assets/default-avtar.jpg';
 import AuthModal from '../components/AuthModal';
 
 function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onClick, onViewDetails }) {
@@ -345,7 +345,7 @@ export default function Profile() {
       <aside className="w-full md:w-72 min-h-[120px] md:min-h-full bg-white border-b md:border-b-0 md:border-r shadow-lg flex flex-row md:flex-col items-center md:items-center py-4 md:py-8 gap-4 md:gap-6 z-10">
         <div className="flex flex-col items-center cursor-pointer w-1/3 md:w-full" onClick={() => setCenterTab('profile')}>
           <img
-            src={profile?.avatar || profile?.profile?.avatar || defaultAvatar}
+            src={profile?.avatar && profile?.avatar.trim() !== '' ? profile.avatar : (profile?.profile?.avatar && profile.profile.avatar.trim() !== '' ? profile.profile.avatar : defaultAvatar)}
             onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
             alt="Avatar"
             className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2 border-blue-400 mb-1 md:mb-2 hover:scale-105 transition"
@@ -408,7 +408,7 @@ export default function Profile() {
                 <div className="flex flex-col items-center mb-4 relative">
                   <div className="relative w-24 h-24 mb-2">
                     <img
-                      src={avatar || profile?.avatar || profile?.profile?.avatar || defaultAvatar}
+                      src={avatar && avatar.trim() !== '' ? avatar : (profile?.avatar && profile.avatar.trim() !== '' ? profile.avatar : (profile?.profile?.avatar && profile.profile.avatar.trim() !== '' ? profile.profile.avatar : defaultAvatar))}
                       onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
                       alt="Avatar Preview"
                       className="w-24 h-24 rounded-full object-cover border-2 border-blue-400"
