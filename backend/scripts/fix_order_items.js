@@ -15,15 +15,17 @@ async function fixOrderItems() {
     let changed = false;
     for (const item of order.items) {
       // Try to find product or accessory by price (fallback), or update logic as needed
-      if (!item.product || !item.name) {
+      if (!item.product || !item.name || !item.productType) {
         let prod = await Product.findOne({ price: item.price });
         let acc = await Accessory.findOne({ price: item.price });
         if (prod) {
           item.product = prod._id;
           item.name = prod.name;
+          item.productType = 'Product';
         } else if (acc) {
           item.product = acc._id;
           item.name = acc.name;
+          item.productType = 'Accessory';
         }
         changed = true;
       }

@@ -50,10 +50,10 @@ export default function AdminDashboard() {
         setOrders(Array.isArray(ordersRes.data?.data) ? ordersRes.data.data : []);
         setUsers(Array.isArray(usersRes.data?.data) ? usersRes.data.data : []);
         setFeedback(Array.isArray(feedbackRes.data?.data) ? feedbackRes.data.data : []);
-        // Low stock alert (products + accessories)
-        const lowStockProducts = (productsRes || []).filter(p => Number(p.stock) < 5);
-        const lowStockAccessories = (accessoriesRes || []).filter(a => Number(a.stock) < 5);
-        setLowStock([...lowStockProducts, ...lowStockAccessories]);
+  // Low stock alert (products + accessories)
+  const lowStockProducts = (productsRes || []).filter(p => Number(p.stock) < 5);
+  const lowStockAccessories = (accessoriesRes || []).filter(a => Number(a.stock) < 5);
+  setLowStock([...lowStockProducts, ...lowStockAccessories]);
       } catch {
         setProducts([]);
         setAccessories([]);
@@ -259,13 +259,27 @@ export default function AdminDashboard() {
           {lowStock.length > 0 ? (
             <ul className="list-disc ml-4">
               {lowStock.map(i => {
-                const prod = products.find(p => p._id === i._id || p.id === i.id);
-                const acc = accessories.find(a => a._id === i._id || a.id === i.id);
+                const acc = accessories.find(a =>
+                  String(a._id) === String(i._id) ||
+                  String(a._id) === String(i.id) ||
+                  String(a.id) === String(i._id) ||
+                  String(a.id) === String(i.id)
+                );
+                const prod = products.find(p =>
+                  String(p._id) === String(i._id) ||
+                  String(p._id) === String(i.id) ||
+                  String(p.id) === String(i._id) ||
+                  String(p.id) === String(i.id)
+                );
                 return (
-                  <li key={i._id || i.id} className="cursor-pointer text-blue-700 hover:underline" onClick={() => {
-                    if (prod) navigate(`/admin/edit-product/${prod._id || prod.id}`);
-                    else if (acc) navigate(`/admin/edit-accessory/${acc._id || acc.id}`);
-                  }}>
+                  <li
+                    key={i._id || i.id}
+                    className="cursor-pointer text-blue-700 hover:underline"
+                    onClick={() => {
+                      if (acc) navigate(`/admin/edit-product/${acc._id || acc.id}?type=Accessory`);
+                      else if (prod) navigate(`/admin/edit-product/${prod._id || prod.id}?type=Product`);
+                    }}
+                  >
                     {i.name} (Stock: {i.stock})
                   </li>
                 );
@@ -356,7 +370,7 @@ export default function AdminDashboard() {
                 {lowestSale ? (
                   <>
                     <span className="font-semibold">{lowestSale.name}</span><br />
-                    Sold: {lowestSale.totalSold}, Revenue: \t{lowestSale.totalRevenue}
+                    Sold: {lowestSale.totalSold}, Revenue: {lowestSale.totalRevenue}
                   </>
                 ) : 'N/A'}
               </div>
