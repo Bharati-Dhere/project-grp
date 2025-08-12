@@ -132,8 +132,13 @@ export default function Accessories() {
 
   const handleAddToCart = async (item) => {
     if (!user) return alert('Please log in to use cart.');
-    if (!cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (item._id || item.id))) {
-      await updateCart(item._id || item.id, user.token);
+    const model = 'Accessory';
+    if (!cart.some((c) => {
+      const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+      const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+      return String(cid) === String(item._id || item.id) && cmodel === model;
+    })) {
+      await updateCart(item._id || item.id, user.token, model);
     }
     // Always reload cart from backend for true state
     const cartData = await fetchCart(user._id);
@@ -142,7 +147,8 @@ export default function Accessories() {
   };
   const handleRemoveFromCart = async (itemId) => {
     if (!user) return;
-    await removeFromCart(itemId, user.token);
+    const model = 'Accessory';
+    await removeFromCart(itemId, user.token, model);
     // Always reload cart from backend for true state
     const cartData = await fetchCart(user._id);
     setCart((cartData && cartData.data) || []);
@@ -245,7 +251,11 @@ const ACCESSORY_BRANDS = accessories.length
           {filteredAccessories
             .map((accessory) => {
               const id = accessory._id || accessory.id;
-              const inCart = cart.some((c) => String(c._id || c.id) === String(id));
+              const inCart = cart.some((c) => {
+                const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+                const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+                return String(cid) === String(id) && cmodel === 'Accessory';
+              });
               const inWishlist = wishlist.some((w) => {
                 const wid = w._id || w.id;
                 const wmodel = w._wishlistModel || (w.category ? 'Product' : 'Accessory');

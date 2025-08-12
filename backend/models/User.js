@@ -6,7 +6,16 @@ const UserSchema = new mongoose.Schema({
   password: { type: String }, // optional for Google/Clerk users
   hasPassword: { type: Boolean, default: false }, // set by Clerk webhook
   cart: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: 'cart.model'
+    },
+    model: {
+      type: String,
+      enum: ['Product', 'Accessory'],
+      required: true
+    },
     quantity: { type: Number, default: 1 }
   }],
   wishlist: [{

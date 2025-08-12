@@ -123,8 +123,13 @@ const Products = () => {
       setShowAuthModal(true);
       return;
     }
-    if (!cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (product._id || product.id))) {
-      await updateCart(product._id || product.id);
+    const model = 'Product';
+    if (!cart.some((c) => {
+      const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+      const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+      return cid === (product._id || product.id) && cmodel === model;
+    })) {
+      await updateCart(product._id || product.id, user.token, model);
       // Always reload cart from backend for true state
       const cartData = await fetchCart(user._id);
       setCart((cartData && cartData.data) || []);
@@ -134,7 +139,8 @@ const Products = () => {
 
   const handleRemoveFromCart = async (id) => {
     if (!user) return;
-    await removeFromCart(id, user.token);
+    const model = 'Product';
+    await removeFromCart(id, user.token, model);
     // Always reload cart from backend for true state
     const cartData = await fetchCart(user._id);
     setCart((cartData && cartData.data) || []);
@@ -234,7 +240,11 @@ const Products = () => {
         <div className={gridView ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-6"}>
           {filteredProducts
             .map((product) => {
-              const inCart = !!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id));
+              const inCart = !!cart.find((c) => {
+                const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+                const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+                return cid === (product._id || product.id) && cmodel === 'Product';
+              });
               const inWishlist = !!wishlist.find((w) => {
                 const wid = w._id || w.id;
                 const wmodel = w._wishlistModel || (w.category ? 'Product' : 'Accessory');

@@ -1,8 +1,10 @@
 
 import axios from 'axios';
-// Remove from cart (single product)
-export const removeFromCart = async (productId, userToken) => {
-  const res = await axios.post(`${API_BASE}/cart/remove`, { productId }, {
+// Remove from cart (single product or accessory)
+// model should be 'Product' or 'Accessory'
+export const removeFromCart = async (productId, userToken, model) => {
+  if (!model) throw new Error('Model type (Product or Accessory) is required for cart actions');
+  const res = await axios.post(`${API_BASE}/cart/remove`, { productId, model }, {
     withCredentials: true,
     headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
   });
@@ -113,9 +115,11 @@ export const fetchCart = async (userId) => {
 };
 
 
-// Add to cart (single product)
-export const updateCart = async (productId, userToken) => {
-  const res = await axios.post(`${API_BASE}/cart/add`, { productId }, {
+// Add to cart (single product or accessory)
+// model should be 'Product' or 'Accessory'
+export const updateCart = async (productId, userToken, model) => {
+  if (!model) throw new Error('Model type (Product or Accessory) is required for cart actions');
+  const res = await axios.post(`${API_BASE}/cart/add`, { productId, model }, {
     withCredentials: true,
     headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
   });

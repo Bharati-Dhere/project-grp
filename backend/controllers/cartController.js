@@ -1,14 +1,14 @@
 // Remove from cart
 exports.removeFromCart = async (req, res) => {
   try {
-    const { productId } = req.body;
-    if (!productId) return res.status(400).json({ success: false, message: 'Product ID required' });
+    const { productId, model } = req.body;
+    if (!productId || !model) return res.status(400).json({ success: false, message: 'Product ID and model required' });
     const user = req.user;
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
     const initialLength = user.cart.length;
-    user.cart = user.cart.filter(item => !item.product.equals(productId));
+    user.cart = user.cart.filter(item => !(item.product.equals(productId) && item.model === model));
     if (user.cart.length === initialLength) {
-      return res.status(404).json({ success: false, message: 'Product not found in cart' });
+      return res.status(404).json({ success: false, message: 'Item not found in cart' });
     }
     await user.save();
     res.json({ success: true, message: 'Removed from cart', data: user.cart });
@@ -24,27 +24,29 @@ const User = require('../models/User');
 
 exports.addToCart = async (req, res) => {
   try {
-    const { productId } = req.body;
-    console.log('addToCart called, user:', req.user && req.user.email, 'userId:', req.user && req.user._id, 'productId:', productId);
-    if (!productId) return res.status(400).json({ success: false, message: 'Product ID required' });
+    const { productId, model } = req.body;
+    console.log('addToCart called, user:', req.user && req.user.email, 'userId:', req.user && req.user._id, 'productId:', productId, 'model:', model);
+    if (!productId || !model) return res.status(400).json({ success: false, message: 'Product ID and model required' });
 
-    // Try to find in Product or Accessory
-    let product = await Product.findById(productId);
-    if (!product) {
+    // Validate model and existence
+    let product = null;
+    if (model === 'Product') {
+      product = await Product.findById(productId);
+    } else if (model === 'Accessory') {
       product = await Accessory.findById(productId);
-      if (!product) return res.status(404).json({ success: false, message: 'Product/Accessory not found' });
     }
+    if (!product) return res.status(404).json({ success: false, message: 'Product/Accessory not found' });
 
     const user = req.user;
     if (!user) {
       console.log('No user found in addToCart');
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    const cartItem = user.cart.find(item => item.product.equals(productId));
+    const cartItem = user.cart.find(item => item.product.equals(productId) && item.model === model);
     if (cartItem) {
       cartItem.quantity += 1;
     } else {
-      user.cart.push({ product: productId, quantity: 1 });
+      user.cart.push({ product: productId, model, quantity: 1 });
     }
     await user.save();
     res.json({ success: true, message: 'Added to cart', data: user.cart });
@@ -56,13 +58,14 @@ exports.addToCart = async (req, res) => {
 
 exports.getCart = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).populate('cart.product');
+    const user = await User.findById(req.params.userId).populate('cart.product'); // refPath used in schema
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    // Flatten product fields and add quantity at top level
+    // Return populated cart items as flat array
     const cart = user.cart.map(item => {
       const product = item.product && item.product.toObject ? item.product.toObject() : item.product;
       return {
         ...product,
+        _cartModel: item.model,
         quantity: item.quantity,
       };
     });
