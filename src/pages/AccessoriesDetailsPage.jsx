@@ -477,6 +477,8 @@ function AccessoriesDetailsPage() {
                 showActions={!!user}
                 inCart={itemInCart}
                 inWishlist={itemInWishlist}
+                cart={cart}
+                wishlist={wishlist}
                 onAddToCart={async () => {
                   await updateCart(itemId, user?.token, cartModel);
                   if (user && user._id) {

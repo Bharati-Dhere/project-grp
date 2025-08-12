@@ -19,14 +19,32 @@ export default function ProductCard({
   pageType,
   style,
   detailsPath = "productdetails",
+  cart = [],
+  wishlist = [],
 }) {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
   const { user } = useAuth();
-  // Always use props for cart/wishlist state so it updates with user/account changes
-  const isInCart = !!inCart;
-  const isInWishlist = !!inWishlist;
+  // Robustly determine inCart/inWishlist for both Product and Accessory
+  let isInCart = !!inCart;
+  let isInWishlist = !!inWishlist;
+  const productId = product._id || product.id;
+  const model = (product.model && product.model.toLowerCase()) || (product.type && product.type.toLowerCase()) || (product.category && product.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
+  if (cart && cart.length > 0 && typeof inCart === 'undefined') {
+    isInCart = cart.some(c => {
+      const cid = c.product?._id || c.product?.id || c._id || c.id;
+      const cmodel = (c.model && c.model.toLowerCase()) || (c.category && c.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
+      return String(cid) === String(productId) && cmodel === model;
+    });
+  }
+  if (wishlist && wishlist.length > 0 && typeof inWishlist === 'undefined') {
+    isInWishlist = wishlist.some(w => {
+      const wid = w._id || w.id;
+      const wmodel = (w.model && w.model.toLowerCase()) || (w.category && w.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
+      return String(wid) === String(productId) && wmodel === model;
+    });
+  }
 
   const handleCartClick = (e) => {
     e.stopPropagation();
