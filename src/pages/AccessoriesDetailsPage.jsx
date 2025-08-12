@@ -457,12 +457,55 @@ function AccessoriesDetailsPage() {
               || (item.type && item.type.toLowerCase() === 'accessory')
               || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty'))
               || (item.category && item.category.toLowerCase().includes('accessor'));
+            const itemId = item._id || item.id;
+            const cartModel = isAccessory ? 'Accessory' : 'Product';
+            const itemInCart = cart.some(c => {
+              const cid = c.product?._id || c.product?.id || c._id || c.id;
+              const cmodel = c.model || (c.category ? 'Accessory' : 'Product');
+              return String(cid) === String(itemId) && cmodel === cartModel;
+            });
+            const itemInWishlist = wishlist.some(w => {
+              const wid = w._id || w.id;
+              const wmodel = w.model || (w.category ? 'Accessory' : 'Product');
+              return String(wid) === String(itemId) && wmodel === cartModel;
+            });
             return (
               <ProductCard
-                key={item._id || item.id}
+                key={itemId}
                 product={item}
                 detailsPath={isAccessory ? 'accessory' : 'productdetails'}
                 showActions={!!user}
+                inCart={itemInCart}
+                inWishlist={itemInWishlist}
+                onAddToCart={async () => {
+                  await updateCart(itemId, user?.token, cartModel);
+                  if (user && user._id) {
+                    const cartData = await fetchCart(user._id);
+                    setCart((cartData && cartData.data) || []);
+                  }
+                }}
+                onRemoveFromCart={async () => {
+                  const api = await import('../utils/api');
+                  await api.removeFromCart(itemId, user?.token, cartModel);
+                  if (user && user._id) {
+                    const cartData = await fetchCart(user._id);
+                    setCart((cartData && cartData.data) || []);
+                  }
+                }}
+                onAddToWishlist={async () => {
+                  await updateWishlist(itemId, 'add', user?.token, cartModel);
+                  if (user && user._id) {
+                    const wishlistData = await fetchWishlist(user._id);
+                    setWishlist((wishlistData && wishlistData.data) || []);
+                  }
+                }}
+                onRemoveFromWishlist={async () => {
+                  await updateWishlist(itemId, 'remove', user?.token, cartModel);
+                  if (user && user._id) {
+                    const wishlistData = await fetchWishlist(user._id);
+                    setWishlist((wishlistData && wishlistData.data) || []);
+                  }
+                }}
               />
             );
           })}
