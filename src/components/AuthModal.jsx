@@ -204,13 +204,12 @@ export default function AuthModal({ onClose, role }) {
         setSignupErrors({});
         // Sign out to clear any session before switching to login
         if (typeof signOut === 'function') await signOut();
-        setIsLogin(true);
-        setLoginData({ email: signupData.email, password: "" });
-        toast.success("Signup successful! Please log in.");
-        setSignupStep(0);
-        setSignupVerificationCode("");
-        // Automatically close modal after signup success
-        if (onClose) setTimeout(() => onClose(), 500);
+  setIsLogin(true);
+  setLoginData({ email: signupData.email, password: "" });
+  toast.success("Signup successful! Please log in.");
+  setSignupStep(0);
+  setSignupVerificationCode("");
+  // Do NOT close modal; show login form with email prefilled
       } else {
         setSignupErrors({ general: "Invalid or expired code. Please try again." });
       }

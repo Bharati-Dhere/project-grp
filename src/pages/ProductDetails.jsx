@@ -339,19 +339,36 @@ function ProductDetails() {
           </div>
           <div className="flex gap-2 items-center justify-center md:justify-start mt-2">
             <button
-              onClick={isInCart ? handleRemoveFromCart : handleAddToCart}
+              onClick={() => {
+                if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
+                if (isInCart) {
+                  handleRemoveFromCart();
+                } else {
+                  handleAddToCart();
+                }
+              }}
               className={`px-5 py-2 rounded-lg transition font-semibold shadow-md ${isInCart ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
             >
               {isInCart ? 'Remove from Cart' : 'Add to Cart'}
             </button>
             <button
-              onClick={handleOrder}
+              onClick={() => {
+                if (!user || !user.email) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                handleOrder();
+              }}
               className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
             >
               Order Now
             </button>
             <button
-              onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+              onClick={() => {
+                if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
+                if (isInWishlist) {
+                  handleRemoveFromWishlist();
+                } else {
+                  handleAddToWishlist();
+                }
+              }}
               className="ml-2 p-2 rounded-full border border-pink-500 bg-white hover:bg-pink-100 transition shadow-md"
               title={isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
             >

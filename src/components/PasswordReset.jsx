@@ -13,16 +13,27 @@ export default function PasswordResetModal({ showModal, setShowModal }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Auto-close after success, but allow manual close at any time except during loading
+  // Reset all state when modal is opened or closed
   useEffect(() => {
-    if (step === 4) {
-      // Close after 1.2s, but allow manual close at any time
+    if (showModal) {
+      setStep(1);
+      setEmail("");
+      setCode("");
+      setPassword("");
+      setMessage("");
+      setLoading(false);
+    }
+  }, [showModal]);
+
+  // Auto-close only after password reset success
+  useEffect(() => {
+    if (step === 4 && showModal) {
       const timer = setTimeout(() => {
         setShowModal(false);
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [step, setShowModal]);
+  }, [step, setShowModal, showModal]);
 
   //  Step 1: Send email code
   const handleSendCode = async () => {
@@ -56,11 +67,13 @@ export default function PasswordResetModal({ showModal, setShowModal }) {
           return;
         } catch (err2) {
           setMessage(err2.errors?.[0]?.message || err2.message || "Error sending code.");
+          setStep(1); // Always show email entry if error
           setLoading(false);
           return;
         }
       }
       setMessage(err.errors?.[0]?.message || "Error sending code.");
+      setStep(1); // Always show email entry if error
     }
 
     setLoading(false);

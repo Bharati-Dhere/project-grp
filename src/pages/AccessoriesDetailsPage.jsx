@@ -274,8 +274,8 @@ export default function AccessoriesDetailsPage() {
           <div className="flex gap-2 items-center justify-center md:justify-start mt-2">
             <button
               onClick={async () => {
+                if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
                 if (inCart) {
-                  if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
                   const api = await import('../utils/api');
                   await api.removeFromCart(accessory._id, user?.token, 'Accessory');
                   if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
@@ -288,7 +288,6 @@ export default function AccessoriesDetailsPage() {
                   }));
                   window.dispatchEvent(new Event('cartWishlistUpdated'));
                 } else {
-                  if (!user || !user.email) { setAuthModalReason("cart"); setShowAuthModal(true); return; }
                   await updateCart(accessory._id, user?.token, 'Accessory');
                   if (!user || !user._id) { setCart([]); setIsInCart(false); return; }
                   const cartData = await fetchCart(user._id);
@@ -306,15 +305,18 @@ export default function AccessoriesDetailsPage() {
               {inCart ? 'Remove from Cart' : 'Add to Cart'}
             </button>
             <button
-              onClick={handleOrder}
+              onClick={() => {
+                if (!user || !user.email) { setAuthModalReason("order"); setShowAuthModal(true); return; }
+                handleOrder();
+              }}
               className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
             >
               Order Now
             </button>
             <button
               onClick={async () => {
+                if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
                 if (inWishlist) {
-                  if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
                   await updateWishlist(accessory._id, "remove", user?.token, 'Accessory');
                   if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
                   const wishlistData = await fetchWishlist(user._id);
@@ -326,7 +328,6 @@ export default function AccessoriesDetailsPage() {
                   }));
                   window.dispatchEvent(new Event('cartWishlistUpdated'));
                 } else {
-                  if (!user || !user.email) { setAuthModalReason("wishlist"); setShowAuthModal(true); return; }
                   await updateWishlist(accessory._id, "add", user?.token, 'Accessory');
                   if (!user || !user._id) { setWishlist([]); setIsInWishlist(false); return; }
                   const wishlistData = await fetchWishlist(user._id);

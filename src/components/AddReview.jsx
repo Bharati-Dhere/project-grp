@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useReviews } from '../context/ReviewContext';
+import AuthModal from './AuthModal';
 
 const AddReview = () => {
   const { addReview } = useReviews();
@@ -13,9 +14,16 @@ const AddReview = () => {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalReason, setAuthModalReason] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user || !user.email) {
+      setAuthModalReason('review');
+      setShowAuthModal(true);
+      return;
+    }
     if (!name || !description || !rating) {
       setError('Please fill in all fields.');
       return;
@@ -101,6 +109,11 @@ const AddReview = () => {
           {loading ? 'Submitting...' : 'Submit Review'}
         </button>
       </form>
+
+      {/* Auth Modal for guest users */}
+      {showAuthModal && (
+        <AuthModal reason={authModalReason} onClose={() => setShowAuthModal(false)} />
+      )}
     </div>
   );
 };
