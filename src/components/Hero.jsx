@@ -115,7 +115,9 @@ const Hero = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 shadow-md hover:scale-105">
               {t.shopNow || 'Shop Now'}
             </button>
-            <button className="border border-white text-white px-6 py-3 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition-all duration-300 shadow-md hover:scale-105">
+            <button 
+             onClick={() => navigate('/about')}
+            className="border border-white text-white px-6 py-3 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition-all duration-300 shadow-md hover:scale-105">
               {t.exploreMore || 'Explore More'}
             </button>
           </div>

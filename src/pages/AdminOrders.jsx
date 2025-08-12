@@ -101,7 +101,7 @@ export default function AdminOrders() {
               <span className="text-xs text-gray-500">Placed on: {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : 'N/A'}</span>
               <span className="text-xs text-blue-700 font-semibold">Total: ₹{(o.items || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0)}</span>
               <span className={`px-2 py-1 rounded text-xs ${o.status === "Delivered" ? "bg-green-100 text-green-700" : o.status === "Cancelled" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>{o.status}</span>
-              <span className="text-sm text-gray-500">{o.user?.email || ''}</span>
+              <span className="text-sm text-gray-500">{o.userEmail || o.user?.email || ''}</span>
               <span className="text-sm text-gray-500">{o.paymentInfo?.method || ''}</span>
               <span className="text-xs text-gray-500">Delivery: {o.deliveryDate ? new Date(o.deliveryDate).toLocaleDateString() : 'Not set'}</span>
               <span className="text-xs text-gray-500">Address: {o.address || ''}</span>
@@ -145,7 +145,7 @@ export default function AdminOrders() {
             <div className="mb-2"><span className="font-semibold">Placed on:</span> {detailsOrder.createdAt ? new Date(detailsOrder.createdAt).toLocaleDateString() : 'N/A'}</div>
             <div className="mb-2"><span className="font-semibold">Delivery Date:</span> {detailsOrder.deliveryDate ? new Date(detailsOrder.deliveryDate).toLocaleDateString() : 'Not set'}</div>
             <div className="mb-2"><span className="font-semibold">Status:</span> {detailsOrder.status}</div>
-            <div className="mb-2"><span className="font-semibold">Customer Email:</span> {detailsOrder.user?.email || 'N/A'}</div>
+            <div className="mb-2"><span className="font-semibold">Customer Email:</span> {detailsOrder.userEmail || detailsOrder.user?.email || 'N/A'}</div>
             <div className="mb-2"><span className="font-semibold">Address:</span> {detailsOrder.address || 'N/A'}</div>
             <div className="mb-2"><span className="font-semibold">Payment:</span> {detailsOrder.paymentInfo?.method || 'N/A'}</div>
             <div className="mb-2"><span className="font-semibold">Total Price:</span> ₹{(detailsOrder.items || []).reduce((sum, prod) => sum + (Number(prod.price) * Number(prod.quantity || 1)), 0)}</div>

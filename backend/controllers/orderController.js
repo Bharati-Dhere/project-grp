@@ -94,7 +94,10 @@ exports.placeOrder = async (req, res) => {
     }
 
   // Always use the authenticated user for the order
-  const order = await Order.create({ user: req.userId, items, total, address, paymentInfo, status: 'Processing' });
+  // Fetch user email
+  const user = req.user || (await require('../models/User').findById(req.userId));
+  const userEmail = user && user.email ? user.email : '';
+  const order = await Order.create({ user: req.userId, userEmail, items, total, address, paymentInfo, status: 'Processing' });
   res.status(201).json({ success: true, message: 'Order placed', data: order });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', data: null });

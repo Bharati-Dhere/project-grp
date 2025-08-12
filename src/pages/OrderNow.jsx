@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import OrderRelatedCard from '../components/OrderRelatedCard';
+import { useAuth } from "@clerk/clerk-react";
 import { FaHeart, FaRegHeart, FaPuzzlePiece, FaPlus, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { placeOrder, fetchWishlist } from '../utils/api';
@@ -11,6 +12,7 @@ const ORDER_STEPS = [
 ];
 
 export default function OrderNow() {
+  const { getToken } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   // Accept multiple products from location.state
@@ -29,6 +31,7 @@ export default function OrderNow() {
   const [wishlistProducts, setWishlistProducts] = useState([]);
   // Dummy state to force re-render
   const [wishlistModalKey, setWishlistModalKey] = useState(0);
+  const [orderError, setOrderError] = useState("");
   // Add this after your wishlistModalKey state:
 const [orderProducts, setOrderProducts] = useState(() => {
   if (products && Array.isArray(products)) {
@@ -120,14 +123,15 @@ useEffect(() => {
 
   const handlePlaceOrder = async () => {
     setLoading(true);
+    setOrderError("");
     try {
-      // ...existing user logic...
       let newOrder = null;
       if (orderProducts && Array.isArray(orderProducts)) {
         const items = orderProducts.map(p => ({
           product: p._id || p.id,
           quantity: p.quantity || 1,
-          price: p.price
+          price: p.price,
+          productType: p.category && p.category.toLowerCase() === 'accessory' ? 'Accessory' : 'Product'
         }));
         const total = orderProducts.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0) + orderProducts.reduce((sum, p) => sum + (p.deliveryPrice || 0) * (p.quantity || 1), 0);
         newOrder = {
@@ -135,17 +139,17 @@ useEffect(() => {
           total,
           address: shipping.address,
           paymentInfo: payment,
-          deliveryDate // Store the default delivery date in the order
+          deliveryDate
         };
       }
       if (newOrder) {
-        await placeOrder(newOrder);
-        // Optionally clear cart after placing order
+        const token = await getToken();
+        await placeOrder(newOrder, token);
         localStorage.setItem("cart", JSON.stringify([]));
       }
       setShowPopup(true);
     } catch (err) {
-      alert("Error placing order. Please try again.");
+      setOrderError("Error placing order. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -396,6 +400,11 @@ useEffect(() => {
       {step === 2 && (
         <div className="space-y-4 animate-fade-in">
           <h3 className="font-semibold mb-2">Payment</h3>
+          {orderError && (
+            <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center font-semibold">
+              {orderError}
+            </div>
+          )}
           <div className="space-y-4">
             {/* Modern Payment Option Cards */}
             <div

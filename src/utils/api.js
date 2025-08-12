@@ -172,10 +172,17 @@ export const fetchOrders = async () => {
 };
 
 // Never send user field from frontend, backend will use authenticated user
-export const placeOrder = async (orderData) => {
+export const placeOrder = async (orderData, token) => {
   const cleanOrder = { ...orderData };
   if (cleanOrder.user) delete cleanOrder.user;
-  const res = await axios.post(`${API_BASE}/orders`, cleanOrder, { withCredentials: true });
+  const res = await axios.post(
+    `${API_BASE}/orders`,
+    cleanOrder,
+    {
+      withCredentials: true,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
+  );
   return res.data;
 };
 
