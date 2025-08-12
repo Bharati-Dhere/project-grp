@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getLoggedInUser } from "../utils/authUtils";
 import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
@@ -44,14 +43,14 @@ const Products = () => {
         setProducts([]);
       }
       // Load cart and wishlist from backend if logged in
-      if (user && user._id) {
+      if (user) {
         try {
           const [cartData, wishlistData] = await Promise.all([
             fetchCart(user._id),
             fetchWishlist(user._id),
           ]);
-          setCart(cartData || []);
-          setWishlist(wishlistData || []);
+          setCart((cartData && cartData.data) || []);
+          setWishlist((wishlistData && wishlistData.data) || []);
         } catch {
           setCart([]);
           setWishlist([]);
@@ -125,17 +124,18 @@ const Products = () => {
       return;
     }
     if (!cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (product._id || product.id))) {
-      const updated = [...cart, { product: product._id || product.id, quantity: 1 }];
-      setCart(updated);
-      await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+      await updateCart(product._id || product.id);
+      // Always reload cart from backend for true state
+      const cartData = await fetchCart(user._id);
+      setCart((cartData && cartData.data) || []);
       window.dispatchEvent(new Event('cartWishlistUpdated'));
     }
   };
 
   const handleRemoveFromCart = async (id) => {
-    const updated = cart.filter((c) => (c.product ? c.product._id : c._id || c.id) !== id);
-    setCart(updated);
-    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+    // Remove from cart not supported in backend, so just reload cart from backend
+    const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
@@ -146,21 +146,24 @@ const Products = () => {
       return;
     }
     if (!wishlist.some((w) => (w._id || w.id) === (product._id || product.id))) {
-      setWishlist((prev) => [...prev, product]);
       await updateWishlist(product._id || product.id, "add");
+      // Always reload wishlist from backend for true state
+      const wishlistData = await fetchWishlist(user._id);
+      setWishlist((wishlistData && wishlistData.data) || []);
       window.dispatchEvent(new Event('cartWishlistUpdated'));
     }
   };
 
   const handleRemoveFromWishlist = async (id) => {
-    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== id));
     await updateWishlist(id, "remove");
+    // Always reload wishlist from backend for true state
+    const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
   const handleGoToOrderNow = (product) => {
-    const current = getLoggedInUser();
-    if (!current) {
+    if (!user) {
       setAuthModalReason("order");
       setShowAuthModal(true);
       return;

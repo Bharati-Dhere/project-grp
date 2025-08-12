@@ -124,7 +124,7 @@ function ProductDetails() {
       return;
     }
     const updated = [...cart, { product: product._id || product.id, quantity: amount }];
-    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+  await updateCart(product._id || product.id);
     // Always reload cart from backend for true state
     const cartData = await fetchCart();
     setCart(cartData || []);
@@ -138,7 +138,7 @@ function ProductDetails() {
       return;
     }
     const updated = cart.filter((c) => (c.product?._id || c.product?.id || c._id || c.id) !== (product._id || product.id));
-    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+  // Remove from cart not supported in backend, so no call here
     const cartData = await fetchCart();
     setCart(cartData || []);
     setIsInCart((cartData || []).some((c) => (c.product?._id || c.product?.id || c._id || c.id) === (product._id || product.id)));

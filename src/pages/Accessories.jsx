@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { fetchAccessories } from "../utils/api";
-import { getLoggedInUser } from "../utils/authUtils";
+import { useAuth } from "../context/AuthContext";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
 import FilterSidebar from "../components/FilterSidebar";
 
 // Extract unique categories and brands from productsData for sidebar
@@ -99,49 +100,63 @@ export default function Accessories() {
     setPriceRange([0, 5000]);
   };
 
-  // Cart and wishlist logic using backend
-  const user = getLoggedInUser();
+  // Cart and wishlist logic using backend and context
+  const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
 
   useEffect(() => {
-    if (user) {
-      // Fetch cart and wishlist from backend
-      import('../utils/api').then(api => {
-        api.fetchCart().then(setCart).catch(() => setCart([]));
-        api.fetchWishlist().then(setWishlist).catch(() => setWishlist([]));
-      });
-    } else {
-      setCart([]);
-      setWishlist([]);
+    async function fetchUserCartWishlist() {
+      if (user && user._id) {
+        try {
+          const [cartData, wishlistData] = await Promise.all([
+            fetchCart(user._id),
+            fetchWishlist(user._id),
+          ]);
+          setCart((cartData && cartData.data) || []);
+          setWishlist((wishlistData && wishlistData.data) || []);
+        } catch {
+          setCart([]);
+          setWishlist([]);
+        }
+      } else {
+        setCart([]);
+        setWishlist([]);
+      }
     }
+    fetchUserCartWishlist();
+    const handler = () => fetchUserCartWishlist();
+    window.addEventListener('cartWishlistUpdated', handler);
+    return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
 
   const handleAddToCart = async (item) => {
     if (!user) return alert('Please log in to use cart.');
-    const updated = [...cart, item];
-    const api = await import('../utils/api');
-    await api.updateCart({ cart: updated });
-    setCart(updated);
+    if (!cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (item._id || item.id))) {
+      const updated = [...cart, { product: item._id || item.id, quantity: 1 }];
+      setCart(updated);
+  await updateCart(item._id || item.id);
+      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    }
   };
   const handleRemoveFromCart = async (itemId) => {
-    if (!user) return alert('Please log in to use cart.');
-    const updated = cart.filter((c) => String(c._id || c.id) !== String(itemId));
-    const api = await import('../utils/api');
-    await api.updateCart({ cart: updated });
+    const updated = cart.filter((c) => (c.product ? c.product._id : c._id || c.id) !== itemId);
     setCart(updated);
+  // Remove from cart not supported in backend, so no call here
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleAddToWishlist = async (item) => {
     if (!user) return alert('Please log in to use wishlist.');
-    const api = await import('../utils/api');
-    await api.updateWishlist(item._id || item.id, "add");
-    setWishlist((prev) => [...prev, item]);
+    if (!wishlist.some((w) => (w._id || w.id) === (item._id || item.id))) {
+      setWishlist((prev) => [...prev, item]);
+      await updateWishlist(item._id || item.id, "add");
+      window.dispatchEvent(new Event('cartWishlistUpdated'));
+    }
   };
   const handleRemoveFromWishlist = async (itemId) => {
-    if (!user) return alert('Please log in to use wishlist.');
-    const api = await import('../utils/api');
-    await api.updateWishlist(itemId, "remove");
-    setWishlist((prev) => prev.filter((w) => String(w._id || w.id) !== String(itemId)));
+    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== itemId));
+    await updateWishlist(itemId, "remove");
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
   const handleCardClick = (id) => {

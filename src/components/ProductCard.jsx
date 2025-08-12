@@ -28,24 +28,17 @@ export default function ProductCard({
   const isInCart = !!inCart;
   const isInWishlist = !!inWishlist;
 
-  const handleAddToCart = async (e) => {
+  const handleCartClick = (e) => {
     e.stopPropagation();
     if (!user) {
       setAuthModalReason("cart");
       setShowAuthModal(true);
       return;
     }
-    try {
-      if (!isInCart) {
-        await updateCart(product._id || product.id, user.token);
-      } else {
-        // Remove from cart not implemented in backend; show error or implement if needed
-        alert('Remove from cart is not implemented in backend.');
-      }
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } catch (err) {
-      alert('Cart update failed.');
-      console.error(err);
+    if (isInCart) {
+      onRemoveFromCart && onRemoveFromCart();
+    } else {
+      onAddToCart && onAddToCart();
     }
   };
 
@@ -83,23 +76,17 @@ export default function ProductCard({
   //   }
   // };
 
-  const handleAddToWishlist = async (e) => {
+  const handleWishlistClick = (e) => {
     e.stopPropagation();
     if (!user) {
       setAuthModalReason("wishlist");
       setShowAuthModal(true);
       return;
     }
-    try {
-      if (!isInWishlist) {
-        await updateWishlist(product._id || product.id, "add", user.token);
-      } else {
-        alert('Remove from wishlist is not implemented in backend.');
-      }
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
-    } catch (err) {
-      alert('Wishlist update failed.');
-      console.error(err);
+    if (isInWishlist) {
+      onRemoveFromWishlist && onRemoveFromWishlist();
+    } else {
+      onAddToWishlist && onAddToWishlist();
     }
   };
 
@@ -194,24 +181,19 @@ export default function ProductCard({
           />
           {showActions && !pageType && (
             <div className="absolute bottom-2 right-2 z-20">
-              {isInWishlist ? (
-                <button
-                  onClick={handleAddToWishlist}
-                  className="bg-white p-3 rounded-full hover:bg-white shadow-md transition-all duration-300 ease-in-out hover:scale-125 hover:animate-bounce"
-                >
+              <button
+                onClick={handleWishlistClick}
+                className="bg-white p-3 rounded-full hover:bg-white shadow-md transition-all duration-300 ease-in-out hover:scale-125 hover:animate-bounce"
+              >
+                {isInWishlist ? (
                   <FaHeart className="text-red-500" size={20} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleAddToWishlist}
-                  className="bg-white p-3 rounded-full hover:bg-white shadow-md transition-all duration-300 ease-in-out hover:scale-125 hover:animate-bounce"
-                >
+                ) : (
                   <FaRegHeart
                     className="text-blue-600 hover:text-red-500 transition duration-300"
                     size={20}
                   />
-                </button>
-              )}
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -258,21 +240,12 @@ export default function ProductCard({
           {/* Action buttons for product listing */}
           {showActions && !pageType && (
             <div className="flex gap-2 mt-3 items-stretch min-h-[44px]">
-              {isInCart ? (
-                <button
-                  onClick={handleAddToCart}
-                  className="w-1/2 bg-red-500 text-white py-1.5 px-2 rounded-xl text-[10px] md:text-xs hover:bg-red-600 hover:bg-opacity-90 hover:shadow-lg active:scale-95 transition-all duration-300 ease-in-out flex items-center justify-center gap-1 whitespace-nowrap tracking-wide font-semibold"
-                >
-                  <FaTrash /> <span>Remove from Cart</span>
-                </button>
-              ) : (
-                <button
-                  onClick={handleAddToCart}
-                  className="w-1/2 bg-white border border-blue-600 text-blue-600 py-1.5 px-2 rounded-xl text-xs hover:bg-blue-600 hover:text-white hover:bg-opacity-90 hover:shadow-lg active:scale-95 transition-all duration-300 ease-in-out whitespace-nowrap tracking-wide font-semibold"
-                >
-                  Add to Cart
-                </button>
-              )}
+              <button
+                onClick={handleCartClick}
+                className={`w-1/2 py-1.5 px-2 rounded-xl text-xs font-semibold whitespace-nowrap tracking-wide flex items-center justify-center gap-1 transition-all duration-300 ease-in-out ${isInCart ? 'bg-red-500 text-white hover:bg-red-600 hover:bg-opacity-90 hover:shadow-lg active:scale-95' : 'bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:bg-opacity-90 hover:shadow-lg active:scale-95'}`}
+              >
+                {isInCart ? (<><FaTrash /> <span>Remove from Cart</span></>) : 'Add to Cart'}
+              </button>
               <button
                 onClick={handleOrderNow}
                 className="w-1/2 bg-blue-600 text-white py-1.5 px-2 rounded-xl text-xs hover:bg-blue-700 hover:bg-opacity-90 hover:shadow-lg active:scale-95 transition-all duration-300 ease-in-out whitespace-nowrap tracking-wide font-semibold order-now-btn flex items-center justify-center"
@@ -286,7 +259,7 @@ export default function ProductCard({
           {showActions && pageType === "cart" && (
             <div className="flex justify-between items-center mt-3">
               <button
-                onClick={handleAddToWishlist}
+                onClick={handleWishlistClick}
                 className={`p-2 rounded-full border ${
                   isInWishlist
                     ? "bg-pink-100 text-pink-600 border-pink-600"
@@ -321,21 +294,12 @@ export default function ProductCard({
           {showActions && pageType === "wishlist" && (
             <div className="flex flex-col gap-2 mt-3">
               <div className="flex gap-2 w-full">
-                {isInCart ? (
-                  <button
-                    onClick={handleAddToCart}
-                    className="flex-1 bg-red-500 text-white py-2 rounded-full text-xs md:text-sm hover:bg-red-700 hover:text-white hover:scale-105 transition duration-200 flex items-center justify-center gap-1 whitespace-nowrap"
-                  >
-                    <FaTrash /> <span>Remove from Cart</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleAddToCart}
-                    className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-full text-sm hover:bg-blue-600 hover:text-white hover:scale-105 transition duration-200 whitespace-nowrap"
-                  >
-                    Add to Cart
-                  </button>
-                )}
+                <button
+                  onClick={handleCartClick}
+                  className={`flex-1 py-2 rounded-full text-sm whitespace-nowrap transition duration-200 flex items-center justify-center gap-1 ${isInCart ? 'bg-red-500 text-white hover:bg-red-700 hover:text-white hover:scale-105' : 'border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:scale-105'}`}
+                >
+                  {isInCart ? (<><FaTrash /> <span>Remove from Cart</span></>) : 'Add to Cart'}
+                </button>
                 <button
                   onClick={(e) => {
                     e.preventDefault();

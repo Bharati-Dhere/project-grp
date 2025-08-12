@@ -16,24 +16,32 @@ export default function Wishlist() {
 
   // Helper to reload wishlist from backend
   const reloadWishlist = async () => {
+    if (!user || !user._id) {
+      setWishlist([]);
+      setCart([]);
+      return;
+    }
     try {
       const [wishlistData, cartData] = await Promise.all([
-        fetchWishlist(),
-        fetchCart()
+        fetchWishlist(user._id),
+        fetchCart(user._id)
       ]);
-      setWishlist(wishlistData || []);
-      setCart(cartData || []);
+      setWishlist((wishlistData && wishlistData.data) || []);
+      setCart((cartData && cartData.data) || []);
     } catch (error) {
       setWishlist([]);
       setCart([]);
     }
   };
   useEffect(() => {
-    if (!user) {
+    if (!user || !user._id) {
+      setWishlist([]);
+      setCart([]);
       setShowAuthModal(true);
       return;
     }
-    reloadWishlist(); // Ensure this is the correct reloadWishlist function
+    setShowAuthModal(false);
+    reloadWishlist();
     // Always reload on cart/wishlist update event
     const handler = () => reloadWishlist();
     window.addEventListener('cartWishlistUpdated', handler);
@@ -41,9 +49,10 @@ export default function Wishlist() {
   }, [user]);
 
   const handleRemoveFromWishlist = async (id) => {
-    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== id));
+    if (!user || !user._id) return;
     try {
-      await updateWishlist(id, "remove");
+      await updateWishlist(id, "remove", user.token);
+      await reloadWishlist();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
@@ -51,14 +60,16 @@ export default function Wishlist() {
 
   // Add to cart from wishlist
   const handleAddToCart = async (product) => {
+    if (!user || !user._id) return;
     try {
-      const cart = await fetchCart();
+      const cartRes = await fetchCart(user._id);
+      const cartArr = (cartRes && cartRes.data) || [];
       // If already in cart, do nothing
-      if ((cart || []).some((c) => (c._id || c.id) === (product._id || product.id))) return;
-      const updated = [...(cart || []), { product: product._id || product.id, quantity: 1 }];
-      await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+      if ((cartArr || []).some((c) => (c._id || c.id) === (product._id || product.id))) return;
+      await updateCart(product._id || product.id, user.token);
+      await reloadWishlist();
     } catch {}
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
   // Update to send all wishlist products to OrderNow

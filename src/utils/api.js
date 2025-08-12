@@ -131,9 +131,11 @@ export const updateWishlist = async (productId, action, userToken) => {
     });
     return res.data;
   } else if (action === "remove") {
-    // Remove by sending a new endpoint or implement in backend if needed
-    // For now, fallback to re-fetching and updating wishlist array if backend supports
-    throw new Error('Remove from wishlist endpoint not implemented');
+    const res = await axios.post(`${API_BASE}/wishlist/remove`, { productId }, {
+      withCredentials: true,
+      headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
+    });
+    return res.data;
   }
 };
 
