@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { getLoggedInUser } from '../utils/authUtils';
 import ProductCard from './ProductCard';
 import { fetchLatestOffers } from '../utils/api';
@@ -9,6 +10,7 @@ import { fetchLatestOffers } from '../utils/api';
 const Offers = () => {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
   useEffect(() => {
     const loadOffers = async () => {
@@ -51,7 +53,9 @@ const Offers = () => {
 
       {/* See More Button */}
       <div className="text-center mt-12">
-        <button className="bg-black text-white py-2 px-8 rounded-full hover:bg-gray-800 transition-all duration-300 text-sm font-semibold shadow-md">
+        <button 
+        onClick={() => navigate('/products')}
+        className="bg-black text-white py-2 px-8 rounded-full hover:bg-gray-800 transition-all duration-300 text-sm font-semibold shadow-md">
           See More Offers
         </button>
       </div>

@@ -148,7 +148,7 @@ const Products = () => {
       return;
     }
     if (!wishlist.some((w) => (w._id || w.id) === (product._id || product.id))) {
-      await updateWishlist(product._id || product.id, "add");
+  await updateWishlist(product._id || product.id, "add", user.token, "Product");
       // Always reload wishlist from backend for true state
       const wishlistData = await fetchWishlist(user._id);
       setWishlist((wishlistData && wishlistData.data) || []);
@@ -157,7 +157,7 @@ const Products = () => {
   };
 
   const handleRemoveFromWishlist = async (id) => {
-    await updateWishlist(id, "remove");
+  await updateWishlist(id, "remove", user.token, "Product");
     // Always reload wishlist from backend for true state
     const wishlistData = await fetchWishlist(user._id);
     setWishlist((wishlistData && wishlistData.data) || []);
@@ -233,24 +233,32 @@ const Products = () => {
         </div>
         <div className={gridView ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-6"}>
           {filteredProducts
-            .map((product) => (
-              <ProductCard
-                key={product._id || product.id}
-                product={product}
-                detailsPath="productdetails"
-                onClick={() => handleCardClick(product._id)}
-                showBadges={true}
-                inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id))}
-                inWishlist={!!wishlist.find((w) => (w._id || w.id) === (product._id || product.id))}
-                onAddToCart={() => handleAddToCart(product)}
-                onRemoveFromCart={() => handleRemoveFromCart(product._id || product.id)}
-                onAddToWishlist={() => handleAddToWishlist(product)}
-                onRemoveFromWishlist={() => handleRemoveFromWishlist(product._id || product.id)}
-                onOrderNow={() => handleGoToOrderNow(product)}
-                showActions={true}
-                gridView={gridView}
-              />
-            ))}
+            .map((product) => {
+              const inCart = !!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id));
+              const inWishlist = !!wishlist.find((w) => {
+                const wid = w._id || w.id;
+                const wmodel = w._wishlistModel || (w.category ? 'Product' : 'Accessory');
+                return wid === (product._id || product.id) && wmodel === 'Product';
+              });
+              return (
+                <ProductCard
+                  key={product._id || product.id}
+                  product={product}
+                  detailsPath="productdetails"
+                  onClick={() => handleCardClick(product._id)}
+                  showBadges={true}
+                  inCart={inCart}
+                  inWishlist={inWishlist}
+                  onAddToCart={() => handleAddToCart(product)}
+                  onRemoveFromCart={() => handleRemoveFromCart(product._id || product.id)}
+                  onAddToWishlist={() => handleAddToWishlist(product)}
+                  onRemoveFromWishlist={() => handleRemoveFromWishlist(product._id || product.id, 'Product')}
+                  onOrderNow={() => handleGoToOrderNow(product)}
+                  showActions={true}
+                  gridView={gridView}
+                />
+              );
+            })}
         </div>
       </main>
       {showAuthModal && (

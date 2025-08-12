@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { fetchAccessories } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
-import { fetchCart, updateCart, fetchWishlist, updateWishlist } from "../utils/api";
+import { fetchCart, updateCart, fetchWishlist, updateWishlist, removeFromCart } from "../utils/api";
 import FilterSidebar from "../components/FilterSidebar";
 
 // Extract unique categories and brands from productsData for sidebar
@@ -133,29 +133,37 @@ export default function Accessories() {
   const handleAddToCart = async (item) => {
     if (!user) return alert('Please log in to use cart.');
     if (!cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (item._id || item.id))) {
-      const updated = [...cart, { product: item._id || item.id, quantity: 1 }];
-      setCart(updated);
-  await updateCart(item._id || item.id);
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+      await updateCart(item._id || item.id, user.token);
     }
+    // Always reload cart from backend for true state
+    const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromCart = async (itemId) => {
-    const updated = cart.filter((c) => (c.product ? c.product._id : c._id || c.id) !== itemId);
-    setCart(updated);
-  // Remove from cart not supported in backend, so no call here
+    if (!user) return;
+    await removeFromCart(itemId, user.token);
+    // Always reload cart from backend for true state
+    const cartData = await fetchCart(user._id);
+    setCart((cartData && cartData.data) || []);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleAddToWishlist = async (item) => {
     if (!user) return alert('Please log in to use wishlist.');
     if (!wishlist.some((w) => (w._id || w.id) === (item._id || item.id))) {
-      setWishlist((prev) => [...prev, item]);
-      await updateWishlist(item._id || item.id, "add");
-      window.dispatchEvent(new Event('cartWishlistUpdated'));
+  await updateWishlist(item._id || item.id, "add", user.token, "Accessory");
     }
+    // Always reload wishlist from backend for true state
+    const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromWishlist = async (itemId) => {
-    setWishlist((prev) => prev.filter((w) => (w._id || w.id) !== itemId));
-    await updateWishlist(itemId, "remove");
+    if (!user) return;
+  await updateWishlist(itemId, "remove", user.token, "Accessory");
+    // Always reload wishlist from backend for true state
+    const wishlistData = await fetchWishlist(user._id);
+    setWishlist((wishlistData && wishlistData.data) || []);
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
@@ -236,18 +244,23 @@ const ACCESSORY_BRANDS = accessories.length
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {filteredAccessories
             .map((accessory) => {
-              const inCart = cart.some((c) => String(c._id || c.id) === String(accessory._id || accessory.id));
-              const inWishlist = wishlist.some((w) => String(w._id || w.id) === String(accessory._id || accessory.id));
+              const id = accessory._id || accessory.id;
+              const inCart = cart.some((c) => String(c._id || c.id) === String(id));
+              const inWishlist = wishlist.some((w) => {
+                const wid = w._id || w.id;
+                const wmodel = w._wishlistModel || (w.category ? 'Product' : 'Accessory');
+                return String(wid) === String(id) && wmodel === 'Accessory';
+              });
               return (
                 <ProductCard
-                  key={accessory._id || accessory.id}
+                  key={id + '-Accessory'}
                   product={accessory}
                   inCart={inCart}
                   inWishlist={inWishlist}
                   onAddToCart={() => handleAddToCart(accessory)}
-                  onRemoveFromCart={() => handleRemoveFromCart(accessory._id || accessory.id)}
+                  onRemoveFromCart={() => handleRemoveFromCart(id)}
                   onAddToWishlist={() => handleAddToWishlist(accessory)}
-                  onRemoveFromWishlist={() => handleRemoveFromWishlist(accessory._id || accessory.id)}
+                  onRemoveFromWishlist={() => handleRemoveFromWishlist(id, 'Accessory')}
                   showActions={true}
                   detailsPath="accessories"
                   showBadges={true}

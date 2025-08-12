@@ -48,10 +48,13 @@ export default function Wishlist() {
     return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
 
-  const handleRemoveFromWishlist = async (id) => {
+  const handleRemoveFromWishlist = async (id, model) => {
     if (!user || !user._id) return;
     try {
-      await updateWishlist(id, "remove", user.token);
+      // Try to find the model type from the wishlist item
+      const item = wishlist.find(w => (w._id || w.id) === id);
+      const modelType = (item && item._wishlistModel) || model || 'Product';
+      await updateWishlist(id, "remove", user.token, modelType);
       await reloadWishlist();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
@@ -97,18 +100,22 @@ export default function Wishlist() {
         <p className="text-gray-500 text-center">Your wishlist is empty.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
-          {wishlist.map((product) => (
-            <ProductCard
-              key={product.id || product._id}
-              product={product}
-              inWishlist={true}
-              inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === (product._id || product.id)) || (c._id || c.id) === (product._id || product.id))}
-              onRemoveFromWishlist={() => handleRemoveFromWishlist(product.id || product._id)}
-              onAddToCart={() => handleAddToCart(product)}
-              showActions={true}
-              pageType="wishlist"
-            />
-          ))}
+          {wishlist.map((item) => {
+            const id = item._id || item.id;
+            const model = item._wishlistModel || (item.category ? 'Product' : 'Accessory');
+            return (
+              <ProductCard
+                key={id + '-' + model}
+                product={item}
+                inWishlist={true}
+                inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === id) || (c._id || c.id) === id)}
+                onRemoveFromWishlist={() => handleRemoveFromWishlist(id, model)}
+                onAddToCart={() => handleAddToCart(item)}
+                showActions={true}
+                pageType="wishlist"
+              />
+            );
+          })}
         </div>
       )}
       {wishlist.length > 0 && (

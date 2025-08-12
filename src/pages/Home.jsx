@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Hero from "../components/Hero";
 import Offers from "../components/Offers";
 import BestSellers from "../components/BestSellers";
@@ -8,7 +9,10 @@ import Steps from "../components/Steps";
 import ReviewSwiper from "../components/ReviewSwiper";
 import Contact from "../components/Contact"; // ✅ Import Contact
 
+
+
 const Home = () => {
+  const navigate = useNavigate();
   return (
     <div>
       <Hero />
@@ -18,6 +22,7 @@ const Home = () => {
       <Steps />
 
       {/* Discount Banner Section */}
+      
       <section
         className="relative bg-fixed bg-center bg-cover text-white text-center py-24 px-4"
         style={{
@@ -30,7 +35,9 @@ const Home = () => {
           <p className="text-lg md:text-xl mb-6">
             Flat 40% off on all smartphones and gadgets
           </p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition duration-300 font-semibold text-sm shadow-md">
+          <button 
+          onClick={() => navigate('/products')}
+          className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition duration-300 font-semibold text-sm shadow-md">
             Shop Now
           </button>
         </div>

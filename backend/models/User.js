@@ -10,14 +10,17 @@ const UserSchema = new mongoose.Schema({
     quantity: { type: Number, default: 1 }
   }],
   wishlist: [{
-    type: mongoose.Schema.Types.ObjectId,
-    refPath: 'wishlistModel'
+    item: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: 'wishlist.model'
+    },
+    model: {
+      type: String,
+      enum: ['Product', 'Accessory'],
+      required: true
+    }
   }],
-  wishlistModel: {
-    type: String,
-    enum: ['Product', 'Accessory'],
-    default: 'Product'
-  },
   profile: {
     name: { type: String },
     age: { type: Number },

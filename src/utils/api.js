@@ -132,15 +132,17 @@ export const fetchWishlist = async (userId) => {
 
 
 // Add/remove from wishlist (single product)
-export const updateWishlist = async (productId, action, userToken) => {
+// model should be 'Product' or 'Accessory'
+export const updateWishlist = async (productId, action, userToken, model) => {
+  if (!model) throw new Error('Model type (Product or Accessory) is required for wishlist actions');
   if (action === "add") {
-    const res = await axios.post(`${API_BASE}/wishlist/add`, { productId }, {
+    const res = await axios.post(`${API_BASE}/wishlist/add`, { productId, model }, {
       withCredentials: true,
       headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
     });
     return res.data;
   } else if (action === "remove") {
-    const res = await axios.post(`${API_BASE}/wishlist/remove`, { productId }, {
+    const res = await axios.post(`${API_BASE}/wishlist/remove`, { productId, model }, {
       withCredentials: true,
       headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
     });
