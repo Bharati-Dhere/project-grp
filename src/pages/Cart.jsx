@@ -48,30 +48,29 @@ export default function Cart() {
     return () => window.removeEventListener('cartWishlistUpdated', handler);
   }, [user]);
 
-  const handleRemoveFromCart = async (id) => {
+  const handleRemoveFromCart = async (id, model) => {
     if (!user || !user._id) return;
     try {
-      await removeFromCart(id, user.token);
+      await removeFromCart(id, user.token, model);
       await reloadCart();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
 
-  // Add to wishlist from cart
-  const handleAddToWishlist = async (product) => {
+  // Add/remove to wishlist from cart (robust for both products and accessories)
+  const handleAddToWishlist = async (product, model) => {
     if (!user || !user._id) return;
     try {
-      await updateWishlist(product._id || product.id, "add", user.token);
+      await updateWishlist(product._id || product.id, "add", user.token, model);
       await reloadCart();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
-  // Remove from wishlist from cart (optional, not shown in UI)
-  const handleRemoveFromWishlist = async (product) => {
+  const handleRemoveFromWishlist = async (product, model) => {
     if (!user || !user._id) return;
     try {
-      await updateWishlist(product._id || product.id, "remove", user.token);
+      await updateWishlist(product._id || product.id, "remove", user.token, model);
       await reloadCart();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
@@ -106,18 +105,28 @@ export default function Cart() {
       ) : (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
-          {cart.map((product) => (
-            <ProductCard
-              key={product.id || product._id}
-              product={product}
-              inCart={true}
-              inWishlist={!!wishlist.find((w) => (w._id || w.id) === (product._id || product.id))}
-              onRemoveFromCart={() => handleRemoveFromCart(product.id || product._id)}
-              onAddToWishlist={() => handleAddToWishlist(product)}
-              showActions={true}
-              pageType="cart"
-            />
-          ))}
+          {cart.map((item) => {
+            const id = item._id || item.id;
+            const model = item._cartModel || item.model || (item.category ? 'Product' : 'Accessory');
+            const inWishlist = !!wishlist.find((w) => {
+              const wid = w._id || w.id;
+              const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
+              return wid === id && wmodel === model;
+            });
+            return (
+              <ProductCard
+                key={id + '-' + model}
+                product={item}
+                inCart={true}
+                inWishlist={inWishlist}
+                onRemoveFromCart={() => handleRemoveFromCart(id, model)}
+                onAddToWishlist={() => handleAddToWishlist(item, model)}
+                onRemoveFromWishlist={() => handleRemoveFromWishlist(item, model)}
+                showActions={true}
+                pageType="cart"
+              />
+            );
+          })}
         </div>
           {/* Total Price & Place Order Button */}
           <div className="flex flex-col md:flex-row items-center justify-between mt-8 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">

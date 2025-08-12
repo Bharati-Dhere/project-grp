@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchWishlist, updateWishlist, fetchCart, updateCart } from "../utils/api";
+import { fetchWishlist, updateWishlist, fetchCart, updateCart, removeFromCart } from "../utils/api";
 import ProductCard from "../components/ProductCard";
 import AuthModal from "../components/AuthModal";
 
@@ -61,15 +61,27 @@ export default function Wishlist() {
   };
 
 
-  // Add to cart from wishlist
-  const handleAddToCart = async (product) => {
+  // Add/remove to cart from wishlist (robust for both products and accessories)
+  const handleAddToCart = async (item, model) => {
     if (!user || !user._id) return;
     try {
       const cartRes = await fetchCart(user._id);
       const cartArr = (cartRes && cartRes.data) || [];
       // If already in cart, do nothing
-      if ((cartArr || []).some((c) => (c._id || c.id) === (product._id || product.id))) return;
-      await updateCart(product._id || product.id, user.token);
+      if ((cartArr || []).some((c) => {
+        const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+        const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+        return cid === (item._id || item.id) && cmodel === model;
+      })) return;
+      await updateCart(item._id || item.id, user.token, model);
+      await reloadWishlist();
+    } catch {}
+    window.dispatchEvent(new Event('cartWishlistUpdated'));
+  };
+  const handleRemoveFromCart = async (item, model) => {
+    if (!user || !user._id) return;
+    try {
+      await removeFromCart(item._id || item.id, user.token, model);
       await reloadWishlist();
     } catch {}
     window.dispatchEvent(new Event('cartWishlistUpdated'));
@@ -103,14 +115,20 @@ export default function Wishlist() {
           {wishlist.map((item) => {
             const id = item._id || item.id;
             const model = item._wishlistModel || (item.category ? 'Product' : 'Accessory');
+            const inCart = !!cart.find((c) => {
+              const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
+              const cmodel = c._cartModel || c.model || (c.category ? 'Product' : 'Accessory');
+              return cid === id && cmodel === model;
+            });
             return (
               <ProductCard
                 key={id + '-' + model}
                 product={item}
                 inWishlist={true}
-                inCart={!!cart.find((c) => ((c.product && (c.product._id || c.product.id)) === id) || (c._id || c.id) === id)}
+                inCart={inCart}
                 onRemoveFromWishlist={() => handleRemoveFromWishlist(id, model)}
-                onAddToCart={() => handleAddToCart(item)}
+                onAddToCart={() => handleAddToCart(item, model)}
+                onRemoveFromCart={() => handleRemoveFromCart(item, model)}
                 showActions={true}
                 pageType="wishlist"
               />
