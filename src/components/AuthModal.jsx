@@ -317,16 +317,8 @@ export default function AuthModal({ onClose, role }) {
               </button>
             </form>
             <div className="my-2 w-full flex flex-col items-center">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white p-2 rounded hover:bg-red-700 transition duration-200 text-base sm:text-sm mb-2"
-                disabled={loading}
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
-                Continue with Google
-              </button>
-              {googleError && <p className="text-red-600 text-sm mt-1">{googleError}</p>}
+              
+              
               <button
                 type="button"
                 className="w-full text-blue-600 underline text-sm mt-2"
@@ -397,18 +389,7 @@ export default function AuthModal({ onClose, role }) {
                 </button>
               </form>
             )}
-            <div className="my-4 w-full flex flex-col items-center">
-              <button
-                type="button"
-                onClick={handleGoogleSignup}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white p-2 rounded hover:bg-red-700 transition duration-200 text-base sm:text-sm mb-2"
-                disabled={loading}
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
-                Sign up with Google
-              </button>
-              {googleError && <p className="text-red-600 text-sm mt-1">{googleError}</p>}
-            </div>
+            
           </>
         )}
         <p className="text-center mt-4 text-sm">
