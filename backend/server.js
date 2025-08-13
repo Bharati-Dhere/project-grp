@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const Razorpay = require('razorpay');
 const cors = require('cors');
+const crypto = require('crypto');
 
 
 
@@ -55,3 +57,49 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => console.error('MongoDB connection error:', err));
+
+
+  // const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Razorpay instance
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Create order API
+app.post('/create-order', async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const order = await razorpay.orders.create({
+      amount: amount * 100, // paise
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`
+    });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify payment API
+app.post('/verify-payment', (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  const sign = razorpay_order_id + "|" + razorpay_payment_id;
+  const expectedSign = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .update(sign)
+    .digest("hex");
+
+  if (expectedSign === razorpay_signature) {
+    res.json({ success: true, message: "Payment verified" });
+  } else {
+    res.status(400).json({ success: false, message: "Invalid signature" });
+  }
+});
+
+// app.listen(process.env.PORT, () => {
+//   console.log(`Backend running on port ${process.env.PORT}`);
+// });
