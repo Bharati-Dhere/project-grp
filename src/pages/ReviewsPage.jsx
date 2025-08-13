@@ -45,8 +45,8 @@ const ReviewPage = () => {
       {/* Review cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sortedReviews.length > 0 ? (
-          sortedReviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+          sortedReviews.map((review, idx) => (
+            <ReviewCard key={review.id || review._id || idx} review={review} />
           ))
         ) : (
           <p className="text-gray-500">No reviews yet. Be the first to add one!</p>

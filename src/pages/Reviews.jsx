@@ -60,7 +60,8 @@ export default function Reviews() {
   setUserReview("");
   setUserRating(5);
   setSuccessMsg("Review added successfully!");
-  setTimeout(() => setSuccessMsg("");, 3000);
+  console.log("Success message set!");
+  setTimeout(() => setSuccessMsg(""), 5000);
   };
 
   return (
@@ -92,22 +93,24 @@ export default function Reviews() {
           ))
         )}
       </div>
-      {successMsg && (
-        <div className="mb-4 text-green-600 font-semibold text-center bg-green-100 border border-green-300 rounded p-2">
-          {successMsg}
-        </div>
-      )}
       <div className="border-t pt-4 mt-4">
-        <h4 className="font-semibold mb-2">Add Your Review</h4>
         <div>
-          <div className="flex gap-2 items-center mb-2">
-            <label>Rating:</label>
-            <select value={userRating} onChange={e => setUserRating(Number(e.target.value))} className="border rounded px-2 py-1">
-              {[5,4,3,2,1].map(r => <option key={r} value={r}>{r}★</option>)}
-            </select>
+          {successMsg && (
+            <div className="mb-4 text-green-700 font-bold text-center bg-green-200 border-2 border-green-500 rounded p-3 animate-pulse">
+              {successMsg}
+            </div>
+          )}
+          <h4 className="font-semibold mb-2">Add Your Review</h4>
+          <div>
+            <div className="flex gap-2 items-center mb-2">
+              <label>Rating:</label>
+              <select value={userRating} onChange={e => setUserRating(Number(e.target.value))} className="border rounded px-2 py-1">
+                {[5,4,3,2,1].map(r => <option key={r} value={r}>{r}★</option>)}
+              </select>
+            </div>
+            <textarea value={userReview} onChange={e => setUserReview(e.target.value)} rows={2} className="border rounded w-full px-2 py-1 mb-2" placeholder="Write your review..." />
+            <button onClick={handleAddReview} className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition">Submit Review</button>
           </div>
-          <textarea value={userReview} onChange={e => setUserReview(e.target.value)} rows={2} className="border rounded w-full px-2 py-1 mb-2" placeholder="Write your review..." />
-          <button onClick={handleAddReview} className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition">Submit Review</button>
         </div>
       </div>
       {showAuthModal && (

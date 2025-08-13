@@ -1,62 +1,75 @@
+// Always update wishlistProducts when modal is opened
+  //  useEffect(() => {
+  //   if (showWishlistModal) {
+  //     try {
+  //       const user = JSON.parse(localStorage.getItem("user"));
+  //       const raw = localStorage.getItem(`wishlist_${user?.email}`);
+  //       if (raw) {
+  //         const parsed = JSON.parse(raw);
+  //         if (Array.isArray(parsed)) setWishlistProducts(parsed);
+  //         else setWishlistProducts([]);
+  //       } else {
+  //         setWishlistProducts([]);
+  //       }
+  //     } catch (e) {
+  //       setWishlistProducts([]);
+  //     }
+  //   } else {
+  //     setWishlistProducts([]);
+  //   }
+  // }, [showWishlistModal, wishlistModalKey]);
+  //   // Order products state
+  //   const [orderProducts, setOrderProducts] = useState(() => {
+  //     if (products && Array.isArray(products)) {
+  //       return products.map(p => ({ ...p, quantity: p.quantity || 1 }));
+  //     }
+  //     if (product) return [{ ...product, quantity: amount || 1 }];
+  //     return [];
+  //   });
+
 import React, { useState, useEffect } from "react";
-import OrderRelatedCard from '../components/OrderRelatedCard';
-import { useAuth } from "@clerk/clerk-react";
-import { FaHeart, FaRegHeart, FaPuzzlePiece, FaPlus, FaTimes } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { placeOrder, fetchWishlist } from '../utils/api';
 
-const ORDER_STEPS = [
-  "Shipping Info",
-  "Address",
-  "Payment"
-];
+const ORDER_STEPS = ["Shipping Info", "Address", "Payment"];
 
 export default function OrderNow() {
-  const { getToken } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  // Accept multiple products from location.state
   const { product, amount, products } = location.state || {};
+  
   const [step, setStep] = useState(0);
   const [shipping, setShipping] = useState({ name: "", address: "", pincode: "", phone: "" });
-  const [addressEdit, setAddressEdit] = useState(false);
   const [addressError, setAddressError] = useState("");
   const [payment, setPayment] = useState({ method: "UPI", upi: "" });
   const [loading, setLoading] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  // For modal
   const [showWishlistModal, setShowWishlistModal] = useState(false);
-  const [showAccessoriesModal, setShowAccessoriesModal] = useState(false);
-  // Wishlist state for modal
   const [wishlistProducts, setWishlistProducts] = useState([]);
-  // Dummy state to force re-render
   const [wishlistModalKey, setWishlistModalKey] = useState(0);
   const [orderError, setOrderError] = useState("");
-  // Add this after your wishlistModalKey state:
-const [orderProducts, setOrderProducts] = useState(() => {
-  if (products && Array.isArray(products)) {
-    return products.map(p => ({ ...p, quantity: p.quantity || 1 }));
-  }
-  if (product) return [{ ...product, quantity: amount || 1 }];
-  return [];
-});
 
-  // Always update wishlistProducts when modal is opened (backend-driven)
+  const [orderProducts, setOrderProducts] = useState(() => {
+    if (products && Array.isArray(products)) {
+      return products.map(p => ({ ...p, quantity: p.quantity || 1 }));
+    }
+    if (product) return [{ ...product, quantity: amount || 1 }];
+    return [];
+  });
+
   useEffect(() => {
-    const fetchAndSetWishlist = async () => {
+    const fetchUserWishlist = async () => {
       if (showWishlistModal) {
         try {
-          // Try to get loggedInUser first, fallback to user
-          const user =
-            JSON.parse(localStorage.getItem("loggedInUser")) ||
-            JSON.parse(localStorage.getItem("user"));
-          if (!user || !(user._id || user.id || user.email)) {
+          const user = JSON.parse(localStorage.getItem("loggedInUser")) || JSON.parse(localStorage.getItem("user"));
+          if (!user || !user._id) {
             setWishlistProducts([]);
             return;
           }
-          // Prefer _id or id, fallback to email
-          const userId = user._id || user.id || user.email;
+          const userId = user._id;
           const wishlistData = await fetchWishlist(userId);
+          console.log('Fetched wishlist for user:', userId, wishlistData);
           if (Array.isArray(wishlistData)) setWishlistProducts(wishlistData);
           else if (wishlistData && Array.isArray(wishlistData.data)) setWishlistProducts(wishlistData.data);
           else setWishlistProducts([]);
@@ -67,91 +80,120 @@ const [orderProducts, setOrderProducts] = useState(() => {
         setWishlistProducts([]);
       }
     };
-    fetchAndSetWishlist();
+    fetchUserWishlist();
     // eslint-disable-next-line
   }, [showWishlistModal, wishlistModalKey]);
-//   // Order products state
-//   const [orderProducts, setOrderProducts] = useState(() => {
-//     if (products && Array.isArray(products)) {
-//       return products.map(p => ({ ...p, quantity: p.quantity || 1 }));
-//     }
-//     if (product) return [{ ...product, quantity: amount || 1 }];
-//     return [];
-//   });
 
-useEffect(() => {
-  if (showWishlistModal) {
-    try {
-      // Try to get loggedInUser first, fallback to user
-      const user =
-        JSON.parse(localStorage.getItem("loggedInUser")) ||
-        JSON.parse(localStorage.getItem("user"));
-      if (!user || !user.email) {
-        setWishlistProducts([]);
-        return;
-      }
-      const raw = localStorage.getItem(`wishlist_${user.email}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setWishlistProducts(parsed);
-        else setWishlistProducts([]);
-      } else {
-        setWishlistProducts([]);
-      }
-    } catch (e) {
-      setWishlistProducts([]);
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.email) {
+      navigate("/ordernow");
+      return;
     }
-  } else {
-    setWishlistProducts([]);
-  }
-}, [showWishlistModal, wishlistModalKey]);
+    if (!shipping.address && !shipping.pincode) {
+      const users = JSON.parse(localStorage.getItem("users")) || [];
+      const profile = users.find(u => u.email === user.email);
+      if (profile && (profile.address || profile.pincode)) {
+        setShipping(s => ({
+          ...s,
+          address: profile.address || "",
+          pincode: profile.pincode || ""
+        }));
+      }
+    }
+  }, [navigate]);
 
-  // Use context/backend for user authentication state
-  // Remove localStorage usage for user/session
-  // You may want to use useAuth() here if needed
+  const handleNext = () => setStep(s => Math.min(s + 1, ORDER_STEPS.length - 1));
+  const handlePrev = () => setStep(s => Math.max(s - 1, 0));
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, ORDER_STEPS.length - 1));
-  const handlePrev = () => setStep((s) => Math.max(s - 1, 0));
-
-  // Calculate estimated delivery date (e.g., 5 days from now)
   const getEstimatedDeliveryDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 5);
-    return d.toISOString(); // Store as ISO string for backend/admin editing
+    return d.toLocaleDateString();
   };
-  const [deliveryDate, setDeliveryDate] = useState(getEstimatedDeliveryDate());
+  const [deliveryDate] = useState(getEstimatedDeliveryDate());
 
-  const handlePlaceOrder = async () => {
+  const saveOrder = async () => {
     setLoading(true);
-    setOrderError("");
     try {
-      let newOrder = null;
-      if (orderProducts && Array.isArray(orderProducts)) {
-        const items = orderProducts.map(p => ({
-          product: p._id || p.id,
-          quantity: p.quantity || 1,
-          price: p.price,
-          productType: p.category && p.category.toLowerCase() === 'accessory' ? 'Accessory' : 'Product'
-        }));
-        const total = orderProducts.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0) + orderProducts.reduce((sum, p) => sum + (p.deliveryPrice || 0) * (p.quantity || 1), 0);
-        newOrder = {
-          items,
-          total,
-          address: shipping.address,
-          paymentInfo: payment,
-          deliveryDate
-        };
-      }
-      if (newOrder) {
-        const token = await getToken();
-        await placeOrder(newOrder, token);
-        localStorage.setItem("cart", JSON.stringify([]));
-      }
+      // Prepare order payload for backend
+      const items = orderProducts.map(p => ({
+        product: p._id || p.id,
+        quantity: p.quantity || 1,
+        price: p.price,
+        productType: p.category && p.category.toLowerCase() === 'accessory' ? 'Accessory' : 'Product'
+      }));
+      const total = orderProducts.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0) + orderProducts.reduce((sum, p) => sum + (p.deliveryPrice || 0) * (p.quantity || 1), 0);
+      const newOrder = {
+        items,
+        total,
+        address: shipping.address,
+        paymentInfo: payment,
+        deliveryDate
+      };
+      // Call backend order API (placeOrder)
+      await placeOrder(newOrder);
+      localStorage.setItem("cart", JSON.stringify([]));
       setShowPopup(true);
     } catch (err) {
       setOrderError("Error placing order. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (payment.method === 'UPI') {
+      const grandTotal = orderProducts.reduce((sum, p) => 
+        sum + ((p.price || 0) + (p.deliveryPrice || 0)) * (p.quantity || 1), 0
+      );
+      try {
+        const orderRes = await fetch('http://localhost:5000/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: grandTotal })
+        });
+        const orderData = await orderRes.json();
+        if (!orderData.id) {
+          alert('Failed to create payment order');
+          return;
+        }
+        const options = {
+          key: 'rzp_test_uNl7K4UX0VyScu', // replace with your test key_id
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'Mobile Shop',
+          description: 'Order Payment',
+          order_id: orderData.id,
+          handler: async function (response) {
+            const verifyRes = await fetch('http://localhost:5000/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response)
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              // After payment, call backend order API
+              await saveOrder();
+            } else {
+              alert('Payment verification failed!');
+            }
+          },
+          prefill: {
+            name: shipping.name || 'Customer',
+            email: 'customer@example.com',
+            contact: shipping.phone || '9999999999'
+          },
+          theme: { color: '#3399cc' }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error('Payment error:', err);
+        alert('Something went wrong with payment');
+      }
+    } else {
+      await saveOrder();
     }
   };
 
@@ -163,21 +205,19 @@ useEffect(() => {
         {ORDER_STEPS.map((s, idx) => (
           <React.Fragment key={s}>
             <div className="flex flex-col items-center z-10 min-w-[80px]">
-              <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 transition-all duration-300 ${
-                step >= idx
+              <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 transition-all duration-300 ${step >= idx
                   ? 'bg-blue-600 border-blue-600 text-white scale-110 shadow-lg'
                   : 'bg-gray-200 border-gray-300 text-gray-500'
-              } font-bold text-lg`}>
+                } font-bold text-lg`}>
                 {idx + 1}
               </div>
               <span className={`mt-2 text-xs font-semibold ${step === idx ? 'text-blue-600' : 'text-gray-500'}`}>{s}</span>
             </div>
             {idx < ORDER_STEPS.length - 1 && (
-              <div className={`flex-1 h-1 mx-1 transition-all duration-300 ${
-                step >= idx + 1
+              <div className={`flex-1 h-1 mx-1 transition-all duration-300 ${step >= idx + 1
                   ? 'bg-blue-400'
                   : 'bg-gray-300'
-              }`}></div>
+                }`}></div>
             )}
           </React.Fragment>
         ))}
@@ -201,7 +241,7 @@ useEffect(() => {
               <>
                 <div className="flex flex-col gap-4">
                   {orderProducts.map((p, idx) => (
-                    <div key={p._id || p.id || idx} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
+                    <div key={p.id} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
                       <img src={p.image} alt={p.name} className="w-16 h-16 object-contain rounded bg-gray-100" />
                       <div className="flex-1">
                         <div className="font-medium text-gray-800">{p.name}</div>
@@ -252,10 +292,10 @@ useEffect(() => {
                   ) : (
                     <div className="rounded-md border border-blue-200 bg-blue-50 px-2 py-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-2">
-                        {wishlistProducts.map((p, idx) => {
+                        {wishlistProducts.map((p) => {
                           const isInOrder = orderProducts.some(item => item.id === p.id);
                           return (
-                            <div key={p._id || p.id || idx} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
+                            <div key={p.id} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
                               {/* Product image */}
                               <div className="h-40 w-full bg-gray-100 flex items-center justify-center rounded-t-xl overflow-hidden">
                                 {p.image ? (
@@ -278,11 +318,11 @@ useEffect(() => {
                                 <div className="flex justify-end mt-2 gap-2">
                                   {!isInOrder ? (
                                     <button
-  className="px-3 py-1 rounded-lg text-xs font-semibold shadow transition bg-blue-600 text-white hover:bg-blue-700"
-  onClick={() => setOrderProducts([...orderProducts, { ...p, quantity: 1 }])}
->
-  Add to Order
-</button>
+                                      className="px-3 py-1 rounded-lg text-xs font-semibold shadow transition bg-blue-600 text-white hover:bg-blue-700"
+                                      onClick={() => setOrderProducts([...orderProducts, { ...p, quantity: 1 }])}
+                                    >
+                                      Add to Order
+                                    </button>
                                   ) : (
                                     <>
                                       <button
@@ -329,8 +369,8 @@ useEffect(() => {
             {orderProducts.length > 0 ? (
               <>
                 <div className="flex flex-col gap-4">
-                  {orderProducts.map((p, idx) => (
-                    <div key={p._id || p.id || idx} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
+                  {orderProducts.map((p) => (
+                    <div key={p.id} className="flex items-center gap-4 border-b pb-3 last:border-b-0">
                       <img src={p.image} alt={p.name} className="w-12 h-12 object-contain rounded bg-gray-100" />
                       <div className="flex-1">
                         <div className="font-medium text-gray-800">{p.name}</div>
@@ -400,11 +440,6 @@ useEffect(() => {
       {step === 2 && (
         <div className="space-y-4 animate-fade-in">
           <h3 className="font-semibold mb-2">Payment</h3>
-          {orderError && (
-            <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center font-semibold">
-              {orderError}
-            </div>
-          )}
           <div className="space-y-4">
             {/* Modern Payment Option Cards */}
             <div
@@ -446,7 +481,7 @@ useEffect(() => {
               <span className="text-green-600 font-bold">UPI</span>
             </div>
             {/* UPI Input */}
-            {payment.method === "UPI" && (
+            {/* {payment.method === "UPI" && (
               <div className="mb-2 animate-fade-in">
                 <label className="block font-semibold mb-1 text-blue-700">UPI ID</label>
                 <input
@@ -458,29 +493,24 @@ useEffect(() => {
                   autoFocus
                 />
               </div>
-            )}
+            )} */}
           </div>
           {/* Delivery Date Info */}
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 text-blue-800 text-center">
             <span className="font-semibold">Estimated Delivery Date: </span>
-            <span>{new Date(deliveryDate).toLocaleDateString()}</span>
+            <span>{deliveryDate}</span>
           </div>
           <div className="flex justify-between gap-2 mt-4">
-            <button onClick={handlePrev} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition">Back</button>
-            <button
-              onClick={() => {
-                if (payment.method === 'UPI' && !payment.upi) {
-                  setAddressError("Please enter UPI ID.");
-                  return;
-                }
-                setAddressError("");
-                handlePlaceOrder();
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-all shadow-md text-lg font-semibold"
-              disabled={loading}
-            >{loading ? (payment.method === 'UPI' ? "Paying..." : "Placing...") : (payment.method === 'UPI' ? "Pay & Place Order" : "Place Order")}</button>
-          </div>
+          <button onClick={handlePrev} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition">Back</button>
+          <button
+            onClick={handlePlaceOrder}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-all shadow-md text-lg font-semibold"
+            disabled={loading}
+          >
+            {loading ? (payment.method === 'UPI' ? "Paying..." : "Placing...") : (payment.method === 'UPI' ? "Pay & Place Order" : "Place Order")}
+          </button>
         </div>
+        </div> //might give error
       )}
       {showPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
