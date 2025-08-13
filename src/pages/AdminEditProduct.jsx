@@ -101,8 +101,6 @@ const AdminEditProduct = () => {
       freeDelivery: !!product.freeDelivery,
       deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
       inStock: !!product.inStock,
-      size: product.size,
-      tags: product.tags,
       images: product.images || imagePreviews || []
     };
     try {

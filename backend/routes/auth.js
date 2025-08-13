@@ -63,9 +63,14 @@ router.post('/signup', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (role === 'admin') {
+      if (user.role !== 'admin') return res.status(403).json({ message: 'Only admin can login here.' });
+    } else {
+      if (user.role !== 'user') return res.status(403).json({ message: 'Only user can login here.' });
+    }
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });

@@ -16,11 +16,29 @@ const Auth = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setMessage('');
-    // TODO: Replace with context/backend login/signup logic
-    setShowPopup(true);
-    setTimeout(() => {
-      navigate("/");
-    }, 1500);
+    // User login: send role 'user' to backend
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email: form.username, password: form.password, role: 'user' })
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const data = await res.json();
+          setMessage(data.message || 'Login failed');
+          setShowPopup(true);
+          return;
+        }
+        setShowPopup(true);
+        setTimeout(() => {
+          navigate("/");
+        }, 1500);
+      })
+      .catch(() => {
+        setMessage('Login failed');
+        setShowPopup(true);
+      });
   };
 
   return (

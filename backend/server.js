@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Razorpay = require('razorpay');
 const cors = require('cors');
 const crypto = require('crypto');
+const adminForgotPassword = require('./routes/adminForgotPassword');
 
 
 
@@ -36,6 +37,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/clerk-webhook', require('./routes/clerkWebhook'));
 app.use('/api/accessories', accessoryRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/admin-forgot-password', adminForgotPassword);
 app.use('/api/users', usersRoutes);
 app.use('/api/set-password', require('./routes/setPassword'));
 app.use('/api/cart', cartRoutes);

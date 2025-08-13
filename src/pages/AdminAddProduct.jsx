@@ -19,9 +19,7 @@ const AdminAddProduct = () => {
     freeDelivery: false,
     deliveryPrice: "",
     inStock: true,
-    stock: 10,
-    size: "",
-    tags: ""
+    stock: 10
   });
   const [imagePreviews, setImagePreviews] = useState([]);
   const navigate = useNavigate();
@@ -79,8 +77,6 @@ const AdminAddProduct = () => {
       freeDelivery: !!product.freeDelivery,
       deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
       inStock: !!product.inStock,
-      size: product.size,
-      tags: product.tags,
       images: product.images || [],
       image: (product.images && product.images.length > 0) ? product.images[0] : ""
     };
@@ -104,9 +100,7 @@ const AdminAddProduct = () => {
           offerPrice: product.offer ? Number(product.offerPrice) : 0,
           discountPercent: product.offer ? Number(product.discountPercent) : 0,
           freeDelivery: !!product.freeDelivery,
-          deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice),
-          size: product.size,
-          tags: product.tags
+          deliveryPrice: product.freeDelivery ? 0 : Number(product.deliveryPrice)
         };
         await addAccessory(accessoryData);
       }
@@ -201,7 +195,7 @@ const AdminAddProduct = () => {
           <option value="">Select Color</option>
           {colorOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
-        <input className="w-full border p-2 rounded" name="size" placeholder="Size (optional)" value={product.size} onChange={handleChange} />
+  {/* Removed size field */}
         <input className="w-full border p-2 rounded" name="tags" placeholder="Tags (comma separated)" value={product.tags} onChange={handleChange} />
         <div className="flex gap-4 items-center">
           <label className="flex items-center gap-2"><input type="checkbox" name="offer" checked={product.offer} onChange={handleChange} /> Offer</label>
