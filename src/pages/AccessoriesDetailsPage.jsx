@@ -112,10 +112,12 @@ function AccessoriesDetailsPage() {
       } else if (user?.avatar && user.avatar.trim() !== '') {
         avatar = user.avatar;
       }
+      // Use user.email as the unique user identifier for backend
+      const userField = user?.email || user?.name || 'User';
       await fetch(`http://localhost:5000/api/accessories/${id}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.token}` },
-        body: JSON.stringify({ value: userRating, review: userReview, avatar })
+        body: JSON.stringify({ user: userField, value: userRating, review: userReview, avatar })
       });
       setShowToast(true);
       setUserReview("");

@@ -1,3 +1,39 @@
+// Add a review to an accessory (for POST /api/accessories/:id/reviews)
+exports.addReview = async (req, res) => {
+  try {
+    const { user, value, review, avatar } = req.body;
+    if (!user || typeof value !== 'number') {
+      return res.status(400).json({ success: false, message: 'User and value required' });
+    }
+    const accessory = await Accessory.findById(req.params.id);
+    if (!accessory) {
+      return res.status(404).json({ success: false, message: 'Accessory not found' });
+    }
+    accessory.reviews = accessory.reviews || [];
+    // Prevent duplicate reviews by same user
+    const existing = accessory.reviews.find(r => r.user === user);
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'User already reviewed' });
+    }
+    accessory.reviews.push({ user, value, review, avatar, date: new Date() });
+    await accessory.save();
+    // Optionally, recalculate avgRating and ratingCount
+    const reviews = accessory.reviews;
+    const ratingCount = reviews.length;
+    const avgRating = ratingCount ? (reviews.reduce((sum, r) => sum + r.value, 0) / ratingCount).toFixed(2) : null;
+    res.json({
+      success: true,
+      message: 'Review added',
+      data: {
+        reviews,
+        avgRating,
+        ratingCount
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 const Accessory = require('../models/Accessory');
 // Controller for managing accessories
 exports.getAllAccessories = async (req, res) => {

@@ -18,6 +18,9 @@ router.put('/:id', accessoryController.updateAccessory);
 router.delete('/:id', accessoryController.deleteAccessory);
 
 // Add rating and review to accessory
+
+// Add review to accessory (separate from rate)
+router.post('/:id/reviews', accessoryController.addReview);
 router.post('/:id/rate', accessoryController.rateAccessory);
 
 module.exports = router;

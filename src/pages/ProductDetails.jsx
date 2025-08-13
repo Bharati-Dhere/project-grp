@@ -128,15 +128,19 @@ function ProductDetails() {
       // Refetch product to update rating and reviews
       const res = await fetch(`http://localhost:5000/api/products/${id}`);
       const data = await res.json();
-      setProduct(data);
-      setRatingCount(data.ratingCount || 0);
-      setAvgRating(data.avgRating || null);
-      // Ensure the latest review is shown at the top
+      // Patch: If reviews exist, ensure each review has avatar fallback for rendering
       if (data.reviews && Array.isArray(data.reviews)) {
-        setReviews([...data.reviews]);
+        const reviewsWithAvatar = data.reviews.map(r => ({
+          ...r,
+          avatar: r.avatar || (r.user && user && user.email === r.user ? avatar : undefined)
+        }));
+        setReviews(reviewsWithAvatar);
       } else {
         setReviews([]);
       }
+      setProduct(data);
+      setRatingCount(data.ratingCount || 0);
+      setAvgRating(data.avgRating || null);
       // Dispatch event to auto-refresh product/admin lists
       window.dispatchEvent(new Event('reviewSubmitted'));
     } catch (err) {
