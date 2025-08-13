@@ -493,6 +493,7 @@ function AccessoriesDetailsPage() {
                     const cartData = await fetchCart(user._id);
                     setCart((cartData && cartData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onRemoveFromCart={async () => {
                   const api = await import('../utils/api');
@@ -501,6 +502,7 @@ function AccessoriesDetailsPage() {
                     const cartData = await fetchCart(user._id);
                     setCart((cartData && cartData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onAddToWishlist={async () => {
                   await updateWishlist(itemId, 'add', user?.token, cartModel);
@@ -508,6 +510,7 @@ function AccessoriesDetailsPage() {
                     const wishlistData = await fetchWishlist(user._id);
                     setWishlist((wishlistData && wishlistData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onRemoveFromWishlist={async () => {
                   await updateWishlist(itemId, 'remove', user?.token, cartModel);
@@ -515,6 +518,7 @@ function AccessoriesDetailsPage() {
                     const wishlistData = await fetchWishlist(user._id);
                     setWishlist((wishlistData && wishlistData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
               />
             );

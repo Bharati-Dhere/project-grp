@@ -113,13 +113,16 @@ const BestSellers = () => {
             .slice(0, 4)
             .map((product) => {
               const productId = product._id || product.id;
+              const model = (product.model && product.model.toLowerCase()) || (product.type && product.type.toLowerCase()) || (product.category && product.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
               const inCart = cart.some((c) => {
                 const cid = c.product?._id || c.product?.id || c._id || c.id;
-                return String(cid) === String(productId);
+                const cmodel = (c.model && c.model.toLowerCase()) || (c.category && c.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
+                return String(cid) === String(productId) && cmodel === model;
               });
               const inWishlist = wishlist.some((w) => {
                 const wid = w.product?._id || w.product?.id || w._id || w.id;
-                return String(wid) === String(productId);
+                const wmodel = (w.model && w.model.toLowerCase()) || (w.category && w.category.toLowerCase().includes('accessor') ? 'accessory' : 'product');
+                return String(wid) === String(productId) && wmodel === model;
               });
               return (
                 <ProductCard

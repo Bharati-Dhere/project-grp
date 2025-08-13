@@ -99,8 +99,12 @@ function ProductDetails() {
       }
     }
     fetchAll();
+    // Listen for global cart/wishlist updates
+    const handler = () => fetchAll();
+    window.addEventListener('cartWishlistUpdated', handler);
+    return () => window.removeEventListener('cartWishlistUpdated', handler);
     // eslint-disable-next-line
-  }, [id]);
+  }, [id, user]);
 
   // Add review (rating + text)
   const handleAddReview = async () => {
@@ -529,6 +533,7 @@ function ProductDetails() {
                     const cartData = await fetchCart(user._id);
                     setCart((cartData && cartData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onRemoveFromCart={async () => {
                   const api = await import('../utils/api');
@@ -537,6 +542,7 @@ function ProductDetails() {
                     const cartData = await fetchCart(user._id);
                     setCart((cartData && cartData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onAddToWishlist={async () => {
                   await updateWishlist(itemId, 'add', user?.token, cartModel);
@@ -544,6 +550,7 @@ function ProductDetails() {
                     const wishlistData = await fetchWishlist(user._id);
                     setWishlist((wishlistData && wishlistData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
                 onRemoveFromWishlist={async () => {
                   await updateWishlist(itemId, 'remove', user?.token, cartModel);
@@ -551,6 +558,7 @@ function ProductDetails() {
                     const wishlistData = await fetchWishlist(user._id);
                     setWishlist((wishlistData && wishlistData.data) || []);
                   }
+                  window.dispatchEvent(new Event('cartWishlistUpdated'));
                 }}
               />
             );

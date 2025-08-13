@@ -117,12 +117,13 @@ export default function Cart() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
           {cart.map((item) => {
             const id = item._id || item.id;
-            const model = item._cartModel || item.model || (item.category ? 'Product' : 'Accessory');
+            const model = item._cartModel || item.model || (item.category && item.category.toLowerCase().includes('accessor') ? 'Accessory' : 'Product');
             const inWishlist = !!wishlist.find((w) => {
               const wid = w._id || w.id;
-              const wmodel = w._wishlistModel || w.model || (w.category ? 'Product' : 'Accessory');
+              const wmodel = w._wishlistModel || w.model || (w.category && w.category.toLowerCase().includes('accessor') ? 'Accessory' : 'Product');
               return wid === id && wmodel === model;
             });
+            const detailsPath = (model && model.toLowerCase() === 'accessory') ? 'accessory' : 'productdetails';
             return (
               <ProductCard
                 key={id + '-' + model}
@@ -134,6 +135,7 @@ export default function Cart() {
                 onRemoveFromWishlist={() => handleRemoveFromWishlist(item, model)}
                 showActions={true}
                 pageType="cart"
+                detailsPath={detailsPath}
               />
             );
           })}
