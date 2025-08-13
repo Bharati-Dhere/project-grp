@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchUserProfile, updateUserProfile, fetchOrders } from '../utils/api';
 import defaultAvatar from '../assets/default-avtar.jpg';
 import AuthModal from '../components/AuthModal';
+import ProfileImageUpload from '../components/ProfileImageUpload';
 
 function OrderListItem({ order, onTrack, onCancel, onReorder, onUserCancel, onClick, onViewDetails }) {
   // Calculate total price for all products in the order
@@ -308,6 +309,12 @@ export default function Profile() {
     toast.success("Delivery date updated.");
   }
 
+  // Profile image upload handler
+  const handleProfileImageUpdate = (url) => {
+    setAvatar(url);
+    setProfile(prev => ({ ...prev, profileImage: url }));
+  };
+
   // Don't show anything while modal is open and user is not logged in
   if (!user && showAuthModal) {
     return (
@@ -376,13 +383,9 @@ export default function Profile() {
               <li key={u.email} className="flex items-center gap-2">
                 <button
                   onClick={() => handleSwitchUser(u.email)}
-                  className={`flex-1 text-left px-2 py-1 rounded transition-all duration-200 border flex items-center gap-2 ${u.email === user.email ? 'bg-blue-200 border-blue-500 font-bold cursor-default text-blue-900' : 'text-blue-600 hover:underline hover:bg-blue-50 border-transparent'}`}
-                  disabled={u.email === user.email}
+                  className="flex items-center gap-2"
                 >
-                  {u.email === user.email ? (
-                    <span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-2" title="Active account"></span>
-                  ) : null}
-                  <span>{u.name} ({u.email})</span>
+                  {u.email}
                   {u.email === user.email ? (
                     <span className="ml-auto text-xs px-2 py-0.5 bg-blue-500 text-white rounded-full">Active</span>
                   ) : null}

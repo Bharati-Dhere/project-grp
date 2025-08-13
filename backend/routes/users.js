@@ -15,5 +15,7 @@ router.put('/:id', auth, userController.updateUser);
 router.get('/', auth, userController.getAllUsers);
 // Sync Clerk user to backend DB (upsert)
 router.post('/', userController.syncClerkUser);
+const profileImageRoutes = require('./profileImage');
+router.use(profileImageRoutes);
 
 module.exports = router;

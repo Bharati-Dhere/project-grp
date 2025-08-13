@@ -25,6 +25,7 @@ const app = express();
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static('uploads'));
 app.use('/api/check-email', require('./routes/checkEmail'));
 const reviewsRouter = require('./routes/reviews');
 app.use('/api/change-password', require('./routes/changePassword'));
