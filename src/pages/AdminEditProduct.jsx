@@ -63,15 +63,21 @@ const AdminEditProduct = () => {
     const currentImages = product.images || imagePreviews || [];
     const remainingSlots = maxImages - currentImages.length;
     const filesToAdd = files.slice(0, remainingSlots);
-    const readers = filesToAdd.map(file => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(ev.target.result);
-        reader.readAsDataURL(file);
+
+    // Upload each file to backend and get URL
+    const uploadPromises = filesToAdd.map(async (file) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch('/api/products/upload-image', {
+        method: 'POST',
+        body: formData
       });
+      const data = await res.json();
+      return data.imageUrl;
     });
-    Promise.all(readers).then(imgs => {
-      const newImages = [...currentImages, ...imgs].slice(0, maxImages);
+
+    Promise.all(uploadPromises).then(urls => {
+      const newImages = [...currentImages, ...urls].slice(0, maxImages);
       setProduct(prev => ({ ...prev, images: newImages }));
       setImagePreviews(newImages);
     });
