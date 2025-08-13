@@ -6,12 +6,14 @@ import { fetchLatestBestSellers } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { fetchCart, updateCart, fetchWishlist, updateWishlist } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 
 
 
 const BestSellers = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,11 +40,11 @@ const BestSellers = () => {
       setLoading(true);
       try {
         const [cartData, wishlistData] = await Promise.all([
-          fetchCart(),
-          fetchWishlist(),
+          user && user._id ? fetchCart(user._id) : Promise.resolve({ data: [] }),
+          user && user._id ? fetchWishlist(user._id) : Promise.resolve({ data: [] }),
         ]);
-        setCart(cartData || []);
-        setWishlist(wishlistData || []);
+        setCart((cartData && cartData.data) || []);
+        setWishlist((wishlistData && wishlistData.data) || []);
       } catch (err) {
         setCart([]);
         setWishlist([]);
@@ -54,33 +56,48 @@ const BestSellers = () => {
     const handler = () => loadData();
     window.addEventListener('cartWishlistUpdated', handler);
     return () => window.removeEventListener('cartWishlistUpdated', handler);
-  }, []);
+  }, [user]);
 
-  // Add/remove handlers (same as before)
+  // Add/remove handlers: always update backend, then fetch latest state
+  const reloadData = async () => {
+    setLoading(true);
+    try {
+      const [cartData, wishlistData] = await Promise.all([
+        user && user._id ? fetchCart(user._id) : Promise.resolve({ data: [] }),
+        user && user._id ? fetchWishlist(user._id) : Promise.resolve({ data: [] }),
+      ]);
+      setCart((cartData && cartData.data) || []);
+      setWishlist((wishlistData && wishlistData.data) || []);
+    } catch (err) {
+      setCart([]);
+      setWishlist([]);
+    }
+    setLoading(false);
+  };
+
   const handleAddToCart = async (product) => {
-    if (cart.some((c) => (c.product ? c.product._id : c._id || c.id) === (product._id || product.id))) return;
-    const updated = [...cart, { product: product._id || product.id, quantity: 1 }];
-    setCart(updated);
-    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+    if (!user || !user.token) return;
+    await updateCart(product._id || product.id, user.token, 'Product');
+    await reloadData();
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromCart = async (product) => {
-    const updated = cart.filter((c) => (c.product ? c.product._id : c._id || c.id) !== (product._id || product.id));
-    setCart(updated);
-    await updateCart(updated.map(item => ({ product: item.product || item._id || item.id, quantity: item.quantity || 1 })));
+    if (!user || !user.token) return;
+    const { removeFromCart } = await import('../utils/api');
+    await removeFromCart(product._id || product.id, user.token, 'Product');
+    await reloadData();
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleAddToWishlist = async (product) => {
-    if (wishlist.some((w) => (w._id || w.id) === (product._id || product.id))) return;
-    const updated = [...wishlist, product];
-    setWishlist(updated);
-    await updateWishlist(updated.map(p => p._id || p.id));
+    if (!user || !user.token) return;
+    await updateWishlist(product._id || product.id, 'add', user.token, 'Product');
+    await reloadData();
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
   const handleRemoveFromWishlist = async (product) => {
-    const updated = wishlist.filter((w) => (w._id || w.id) !== (product._id || product.id));
-    setWishlist(updated);
-    await updateWishlist(updated.map(p => p._id || p.id));
+    if (!user || !user.token) return;
+    await updateWishlist(product._id || product.id, 'remove', user.token, 'Product');
+    await reloadData();
     window.dispatchEvent(new Event('cartWishlistUpdated'));
   };
 
@@ -91,24 +108,34 @@ const BestSellers = () => {
         <div className="text-center py-8">Loading...</div>
       ) : (
         <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-          {bestSellers.slice(0, 4).map((product) => {
-            const inCart = cart.some((c) => c.id === product.id || c._id === product._id);
-            const inWishlist = wishlist.some((w) => w.id === product.id || w._id === product._id);
-            return (
-              <ProductCard
-                key={product.id || product._id}
-                product={product}
-                inCart={inCart}
-                inWishlist={inWishlist}
-                onAddToCart={() => handleAddToCart(product)}
-                onRemoveFromCart={() => handleRemoveFromCart(product)}
-                onAddToWishlist={() => handleAddToWishlist(product)}
-                onRemoveFromWishlist={() => handleRemoveFromWishlist(product)}
-                showActions={true}
-                pageType={null}
-              />
-            );
-          })}
+          {bestSellers
+            .filter((product) => !product.model || product.model.toLowerCase() === 'product')
+            .slice(0, 4)
+            .map((product) => {
+              const productId = product._id || product.id;
+              const inCart = cart.some((c) => {
+                const cid = c.product?._id || c.product?.id || c._id || c.id;
+                return String(cid) === String(productId);
+              });
+              const inWishlist = wishlist.some((w) => {
+                const wid = w.product?._id || w.product?.id || w._id || w.id;
+                return String(wid) === String(productId);
+              });
+              return (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  inCart={inCart}
+                  inWishlist={inWishlist}
+                  onAddToCart={() => handleAddToCart(product)}
+                  onRemoveFromCart={() => handleRemoveFromCart(product)}
+                  onAddToWishlist={() => handleAddToWishlist(product, 'Product')}
+                  onRemoveFromWishlist={() => handleRemoveFromWishlist(product, 'Product')}
+                  showActions={true}
+                  pageType={null}
+                />
+              );
+            })}
         </div>
       )}
       {/* See More Button */}
