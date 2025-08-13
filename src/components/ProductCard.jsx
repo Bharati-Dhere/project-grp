@@ -154,6 +154,10 @@ export default function ProductCard({
     }
   };
 
+  // Use first image from images array if available, else fallback to product.image, else defaultAvatar
+  const cardImage = (product.images && product.images.length > 0 && product.images[0])
+    || (product.image && product.image !== '' ? product.image : defaultAvatar);
+
   return (
     <div
       className="relative rounded-2xl shadow-xl group w-full max-w-[340px] min-w-[280px] mx-auto cursor-pointer bg-neutral-900 border border-neutral-800 transition-all duration-500 hover:scale-110 hover:shadow-2xl hover:shadow-blue-400/40 animate-fade-in-long"
@@ -206,7 +210,7 @@ export default function ProductCard({
         <div className="relative bg-gray-100 m-4 rounded-xl p-3 flex justify-center items-center h-52 overflow-hidden transition-all duration-300 ease-in-out">
           <img
             alt={product.name}
-            src={product.image && product.image !== '' ? product.image : defaultAvatar}
+            src={cardImage}
             className="w-auto h-full object-contain transition-all duration-500 ease-in-out group-hover:scale-110 rounded-xl overflow-hidden"
             onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
           />
