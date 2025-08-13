@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
+  externalId: { type: String, unique: true, sparse: true }, // Clerk user id
   email: { type: String, required: true, unique: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user', required: true },
   password: { type: String }, // optional for Google/Clerk users

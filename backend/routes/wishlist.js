@@ -11,6 +11,6 @@ router.post('/remove', auth, wishlistController.removeFromWishlist);
 router.post('/add', auth, wishlistController.addToWishlist);
 
 // Get wishlist (GET /wishlist/:userId)
-router.get('/:userId', auth, wishlistController.getWishlist);
+router.get('/:userId', wishlistController.getWishlist);
 
 module.exports = router;

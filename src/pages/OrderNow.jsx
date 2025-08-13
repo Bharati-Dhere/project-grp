@@ -31,10 +31,13 @@ import React, { useState, useEffect } from "react";
 import { FaHeart, FaRegHeart, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { placeOrder, fetchWishlist } from '../utils/api';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import axios from 'axios';
 
 const ORDER_STEPS = ["Shipping Info", "Address", "Payment"];
 
 export default function OrderNow() {
+  const { user, isLoaded } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
   const { product, amount, products } = location.state || {};
@@ -49,6 +52,7 @@ export default function OrderNow() {
   const [wishlistProducts, setWishlistProducts] = useState([]);
   const [wishlistModalKey, setWishlistModalKey] = useState(0);
   const [orderError, setOrderError] = useState("");
+  const [wishlistError, setWishlistError] = useState("");
 
   const [orderProducts, setOrderProducts] = useState(() => {
     if (products && Array.isArray(products)) {
@@ -62,27 +66,31 @@ export default function OrderNow() {
     const fetchUserWishlist = async () => {
       if (showWishlistModal) {
         try {
-          const user = JSON.parse(localStorage.getItem("loggedInUser")) || JSON.parse(localStorage.getItem("user"));
-          if (!user || !user._id) {
+          setWishlistError("");
+          // Debug: Modal open, fetching wishlist
+          console.log("Wishlist modal opened, fetching wishlist for user:", user?.id);
+          const res = await axios.get(`http://localhost:5000/api/users/by-external-id/${user.id}`);
+          const mongoUser = res.data?.data;
+          const wishlistData = await fetchWishlist(mongoUser._id);
+          if (wishlistData && Array.isArray(wishlistData.data)) {
+            setWishlistProducts(wishlistData.data);
+          } else if (Array.isArray(wishlistData)) {
+            setWishlistProducts(wishlistData);
+          } else {
             setWishlistProducts([]);
-            return;
+            setWishlistError("No products found in your wishlist.");
           }
-          const userId = user._id;
-          const wishlistData = await fetchWishlist(userId);
-          console.log('Fetched wishlist for user:', userId, wishlistData);
-          if (Array.isArray(wishlistData)) setWishlistProducts(wishlistData);
-          else if (wishlistData && Array.isArray(wishlistData.data)) setWishlistProducts(wishlistData.data);
-          else setWishlistProducts([]);
         } catch (e) {
           setWishlistProducts([]);
+          setWishlistError("Could not load wishlist. Please try again later.");
         }
       } else {
         setWishlistProducts([]);
+        setWishlistError("");
       }
     };
     fetchUserWishlist();
-    // eslint-disable-next-line
-  }, [showWishlistModal, wishlistModalKey]);
+  }, [showWishlistModal, wishlistModalKey, user]);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -197,6 +205,17 @@ export default function OrderNow() {
     }
   };
 
+  if (!isLoaded) {
+    return (
+      <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-lg mt-6 flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold mb-6 text-center">Order Now</h2>
+        <div className="flex items-center gap-2 text-blue-600 text-lg">
+          <span className="animate-spin">🔄</span>
+          Loading user information...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-lg mt-6">
       <h2 className="text-2xl font-bold mb-6 text-center">Order Now</h2>
@@ -225,17 +244,19 @@ export default function OrderNow() {
       {step === 0 && (
         <div className="animate-fade-in space-y-4">
           <h3 className="font-semibold mb-2">Shipping Information</h3>
-          <div className="flex gap-4 mb-4">
+          {/* <div className="flex gap-4 mb-4">
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-transform hover:scale-105"
+              className="flex items-center gap
+              -2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-transform hover:scale-105"
               onClick={() => {
                 setWishlistModalKey(k => k + 1);
                 setShowWishlistModal(true);
               }}
+              disabled={!isLoaded || !user || !user.id}
             >
               <FaHeart className="text-lg animate-pulse" /> Add from Wishlist
             </button>
-          </div>
+          </div> */}
           <div className="mb-4 p-4 bg-white rounded-xl shadow border">
             {orderProducts.length > 0 ? (
               <>
@@ -280,22 +301,29 @@ export default function OrderNow() {
                 {/* Modal Header (fixed) */}
                 <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2">
                   <h3 className="text-lg font-bold text-blue-700 flex items-center gap-2"><FaHeart /> Select Products from Wishlist</h3>
-                  <button className="text-2xl text-gray-400 hover:text-red-500" onClick={() => { setShowWishlistModal(false); setWishlistProducts([]); }}><FaTimes /></button>
+                  <button className="text-2xl text-gray-400 hover:text-red-500" onClick={() => { setShowWishlistModal(false); setWishlistProducts([]); setWishlistError(""); }}><FaTimes /></button>
                 </div>
                 {/* Modal Body (scrollable) */}
                 <div className="flex-1 min-h-[120px] h-[60vh] overflow-y-auto">
-                  {wishlistProducts.length === 0 ? (
+                  {/* Debug output for wishlistProducts */}
+                  <pre style={{ background: '#f8f8ff', color: '#333', fontSize: '12px', padding: '8px', borderRadius: '6px', marginBottom: '8px' }}>
+                    {JSON.stringify(wishlistProducts, null, 2)}
+                  </pre>
+                  {wishlistError && (
+                    <div className="text-red-500 text-center font-semibold mb-4">{wishlistError}</div>
+                  )}
+                  {wishlistProducts.length === 0 && !wishlistError ? (
                     <div className="flex flex-col items-center justify-center min-h-[120px] text-gray-500 text-lg font-semibold">
                       <FaRegHeart className="text-4xl mb-2 text-blue-300" />
                       No products added in wishlist. Please add products to wishlist first.
                     </div>
-                  ) : (
+                  ) : wishlistProducts.length > 0 ? (
                     <div className="rounded-md border border-blue-200 bg-blue-50 px-2 py-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-2">
                         {wishlistProducts.map((p) => {
-                          const isInOrder = orderProducts.some(item => item.id === p.id);
+                          const isInOrder = orderProducts.some(item => item.id === p._id);
                           return (
-                            <div key={p.id} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
+                            <div key={p._id} className={`rounded-xl border shadow hover:shadow-lg transition p-0 bg-white flex flex-col ${isInOrder ? 'ring-2 ring-blue-400' : ''}`}>
                               {/* Product image */}
                               <div className="h-40 w-full bg-gray-100 flex items-center justify-center rounded-t-xl overflow-hidden">
                                 {p.image ? (
@@ -319,7 +347,7 @@ export default function OrderNow() {
                                   {!isInOrder ? (
                                     <button
                                       className="px-3 py-1 rounded-lg text-xs font-semibold shadow transition bg-blue-600 text-white hover:bg-blue-700"
-                                      onClick={() => setOrderProducts([...orderProducts, { ...p, quantity: 1 }])}
+                                      onClick={() => setOrderProducts([...orderProducts, { ...p, quantity: 1, id: p._id }])}
                                     >
                                       Add to Order
                                     </button>
@@ -333,7 +361,7 @@ export default function OrderNow() {
                                       </button>
                                       <button
                                         className="px-3 py-1 rounded-lg text-xs font-semibold shadow transition bg-red-500 text-white hover:bg-red-600 ml-2"
-                                        onClick={() => setOrderProducts(orderProducts.filter(item => item.id !== p.id))}
+                                        onClick={() => setOrderProducts(orderProducts.filter(item => item.id !== p._id))}
                                       >
                                         Remove
                                       </button>
@@ -346,11 +374,11 @@ export default function OrderNow() {
                         })}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 {/* Modal Footer */}
                 <div className="flex justify-end mt-6">
-                  <button type="button" className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition" onClick={() => { setShowWishlistModal(false); setWishlistProducts([]); }}>
+                  <button type="button" className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition" onClick={() => { setShowWishlistModal(false); setWishlistProducts([]); setWishlistError(""); }}>
                     Done
                   </button>
                 </div>

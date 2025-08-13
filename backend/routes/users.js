@@ -5,6 +5,8 @@ const auth = require('../middleware/auth');
 
 // Get user by email (for Clerk sync, not for general use)
 router.get('/by-email/:email', userController.getUserByEmail);
+// Get user by Clerk externalId
+router.get('/by-external-id/:externalId', userController.getUserByExternalId);
 // Get user by ID
 router.get('/:id', auth, userController.getUserById);
 // Update user by ID

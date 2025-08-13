@@ -27,6 +27,16 @@ module.exports = {
       res.status(500).json({ success: false, message: 'Server error', data: null });
     }
   },
+    // Get user by Clerk externalId
+    getUserByExternalId: async (req, res) => {
+      try {
+        const user = await User.findOne({ externalId: req.params.externalId }).select('-password');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        res.json({ success: true, message: 'User fetched', data: user });
+      } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', data: null });
+      }
+    },
   updateUser: async (req, res) => {
     try {
       // Only allow updating profile fields, not email/role/password directly
