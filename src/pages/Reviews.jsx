@@ -9,6 +9,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState({ date: "All", rating: "All" });
   const [userReview, setUserReview] = useState("");
   const [userRating, setUserRating] = useState(5);
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     // Load all reviews from backend
@@ -55,9 +56,11 @@ export default function Reviews() {
       body: JSON.stringify(newReview)
     });
     const savedReview = await reviewRes.json();
-    setReviews([...reviews, savedReview]);
-    setUserReview("");
-    setUserRating(5);
+  setReviews([...reviews, savedReview]);
+  setUserReview("");
+  setUserRating(5);
+  setSuccessMsg("Review added successfully!");
+  setTimeout(() => setSuccessMsg("");, 3000);
   };
 
   return (
@@ -89,6 +92,11 @@ export default function Reviews() {
           ))
         )}
       </div>
+      {successMsg && (
+        <div className="mb-4 text-green-600 font-semibold text-center bg-green-100 border border-green-300 rounded p-2">
+          {successMsg}
+        </div>
+      )}
       <div className="border-t pt-4 mt-4">
         <h4 className="font-semibold mb-2">Add Your Review</h4>
         <div>
