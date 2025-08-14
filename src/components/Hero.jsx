@@ -93,7 +93,7 @@ const Hero = () => {
       <img
         src={slides[currentSlide].imgUrl}
         alt="banner"
-        className="absolute inset-0 w-full h-[90vh] object-cover transition-all duration-1000 ease-in-out"
+        className="absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-in-out"
       />
 
       {/* Overlay */}
