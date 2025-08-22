@@ -136,7 +136,6 @@ const AdminExistingProducts = () => {
         <table className="w-full text-left border border-gray-300">
           <thead className="bg-gray-200">
             <tr>
-              <th className="p-2">Image</th>
               <th className="p-2">Name</th>
               <th className="p-2">Category</th>
               <th className="p-2">Brand</th>
@@ -152,13 +151,6 @@ const AdminExistingProducts = () => {
           <tbody>
             {items.map((p) => (
               <tr key={p._id || p.id} className="border-t border-gray-300 hover:bg-gray-50">
-                <td className="p-2">
-                  {p.image ? (
-                    <img src={getImageSrc(p.image)} alt={p.name} className="w-16 h-16 object-cover rounded border" />
-                  ) : (
-                    <span className="text-gray-400">No Image</span>
-                  )}
-                </td>
                 <td className="p-2 font-semibold">{p.name}</td>
                 <td className="p-2">{p.category}</td>
                 <td className="p-2">{p.brand || "-"}</td>

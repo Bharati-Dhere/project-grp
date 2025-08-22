@@ -201,7 +201,7 @@ const Products = () => {
 
   return (
     <div className="min-h-screen p-2 md:p-4 flex flex-col md:flex-row gap-6 bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <aside className="w-full md:w-64 mb-4 md:mb-0 animate-fade-in-up transition-all duration-300 ease-in-out">
+      <aside className="w-full md:w-64 mb-4 md:mb-0 animate-fade-in-up transition-all duration-300 ease-in-out md:sticky md:top-4 h-[80vh]">
         <FilterSidebar
           filters={filters}
           setFilters={setFilters}
