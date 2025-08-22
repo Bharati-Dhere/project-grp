@@ -23,7 +23,13 @@ const ordersRoutes = require('./routes/orders');
 
 const cookieParser = require('cookie-parser');
 const app = express();
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://project-ece7nwubr-bharati-dheres-projects.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
