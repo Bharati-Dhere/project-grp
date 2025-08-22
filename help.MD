@@ -33,4 +33,17 @@ D:\clone\project-grp>node backend/scripts/set_admin_password.js <admin_email> <n
 
 D:\clone\project-grp\backend>node scripts/make_admin.js dbharati5162@gmail.com
 
-npm install bcryptjs cookie-parser cors doteenv express firebase-admin jsonwebtoken mongoose node-fetch
+# backend installation after clone
+cd backend
+
+npm install -g nodemon
+
+npm install bcryptjs cookie-parser cors nodemailer express firebase-admin jsonwebtoken mongoose node-fetch
+
+nodemon run start
+
+# frontend installation after clone
+
+npm install
+
+npm start
