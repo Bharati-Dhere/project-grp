@@ -28,8 +28,24 @@ app.use(cors({
     'http://localhost:3000',
     'https://project-grp.vercel.app'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Log CORS headers for debugging
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    console.log('CORS Headers:', {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials'),
+    });
+  });
+  next();
+});
+
+// Catch-all OPTIONS handler for preflight requests
+app.options('*', cors());
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
