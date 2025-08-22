@@ -496,9 +496,9 @@ function ProductDetails() {
         <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
           {related.map((item) => {
+            // Stricter check for accessory
             const isAccessory = (item.model && item.model.toLowerCase() === 'accessory')
               || (item.type && item.type.toLowerCase() === 'accessory')
-              || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty'))
               || (item.category && item.category.toLowerCase().includes('accessor'));
             const itemId = item._id || item.id;
             const cartModel = isAccessory ? 'Accessory' : 'Product';

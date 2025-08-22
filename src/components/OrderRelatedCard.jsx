@@ -4,11 +4,20 @@ import { FaHeart, FaRegHeart } from 'react-icons/fa';
 export default function OrderRelatedCard({ item, inCart, inWishlist, onAddToCart, onRemoveFromCart, onAddToWishlist, onRemoveFromWishlist, onOrderNow }) {
   const [amount, setAmount] = useState(1);
 
+  // Helper to get correct image src
+  const getImageSrc = (imgPath) => {
+    if (!imgPath) return '';
+    if (imgPath.startsWith('http')) return imgPath;
+    // For local images, prepend backend domain in production
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    return `${backendUrl}${imgPath}`;
+  };
+
   return (
     <div className="shadow-lg rounded-lg p-6 flex flex-col md:flex-row gap-6 bg-white max-w-2xl mx-auto">
       <div className="flex-shrink-0">
         <img
-          src={item.image}
+          src={getImageSrc(item.image)}
           alt={item.name}
           className="w-64 h-64 object-cover rounded-lg"
         />

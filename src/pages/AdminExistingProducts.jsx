@@ -47,6 +47,13 @@ const FIXED_ACCESSORY_BRANDS = [
 ];
 
 const AdminExistingProducts = () => {
+  // Helper to get correct image src
+  const getImageSrc = (imgPath) => {
+    if (!imgPath) return '';
+    if (imgPath.startsWith('http')) return imgPath;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    return `${backendUrl}${imgPath}`;
+  };
   const [type, setType] = useState("Product");
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -147,7 +154,7 @@ const AdminExistingProducts = () => {
               <tr key={p._id || p.id} className="border-t border-gray-300 hover:bg-gray-50">
                 <td className="p-2">
                   {p.image ? (
-                    <img src={p.image} alt={p.name} className="w-16 h-16 object-cover rounded border" />
+                    <img src={getImageSrc(p.image)} alt={p.name} className="w-16 h-16 object-cover rounded border" />
                   ) : (
                     <span className="text-gray-400">No Image</span>
                   )}

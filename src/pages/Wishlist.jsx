@@ -124,7 +124,9 @@ export default function Wishlist() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
           {wishlist.map((item) => {
             const id = item._id || item.id;
-            const model = item._wishlistModel || (item.category && item.category.toLowerCase().includes('accessor') ? 'Accessory' : 'Product');
+            const model = item._wishlistModel
+              || (item.model && item.model.toLowerCase() === 'accessory' ? 'Accessory'
+              : (item.category && item.category.toLowerCase().includes('accessor') ? 'Accessory' : 'Product'));
             const inCart = !!cart.find((c) => {
               const cid = c._id || c.id || (c.product && (c.product._id || c.product.id));
               const cmodel = c._cartModel || c.model || (c.category && c.category.toLowerCase().includes('accessor') ? 'Accessory' : 'Product');

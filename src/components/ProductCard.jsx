@@ -22,6 +22,13 @@ export default function ProductCard({
   cart = [],
   wishlist = [],
 }) {
+  // Helper to get correct image src
+  const getImageSrc = (imgPath) => {
+    if (!imgPath) return defaultAvatar;
+    if (imgPath.startsWith('http')) return imgPath;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    return `${backendUrl}${imgPath}`;
+  };
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalReason, setAuthModalReason] = useState("");
@@ -210,7 +217,7 @@ export default function ProductCard({
         <div className="relative bg-gray-100 m-4 rounded-xl p-3 flex justify-center items-center h-52 overflow-hidden transition-all duration-300 ease-in-out">
           <img
             alt={product.name}
-            src={cardImage}
+            src={getImageSrc(cardImage)}
             className="w-auto h-full object-contain transition-all duration-500 ease-in-out group-hover:scale-110 rounded-xl overflow-hidden"
             onError={e => { e.target.onerror = null; e.target.src = defaultAvatar; }}
           />

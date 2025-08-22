@@ -8,6 +8,13 @@ import AuthModal from "../components/AuthModal";
 import ProductCard from '../components/ProductCard';
 
 function AccessoriesDetailsPage() {
+  // Helper to get correct image src
+  const getImageSrc = (imgPath) => {
+    if (!imgPath) return '';
+    if (imgPath.startsWith('http')) return imgPath;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    return `${backendUrl}${imgPath}`;
+  };
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -249,7 +256,7 @@ function AccessoriesDetailsPage() {
         <div className="flex flex-col items-center gap-4 justify-center">
           <div className="relative group flex justify-center">
             <img
-              src={mainImage}
+              src={getImageSrc(mainImage)}
               alt={accessory.name}
               className="w-80 h-80 md:w-[28rem] md:h-[28rem] object-contain border-4 border-blue-300 rounded-2xl shadow-xl transform transition-transform duration-500 group-hover:scale-105 group-hover:shadow-2xl hover:rotate-1 hover:scale-110 cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100"
               style={{ transition: 'box-shadow 0.4s, transform 0.4s' }}
@@ -261,7 +268,7 @@ function AccessoriesDetailsPage() {
               {accessory.images.map((img, idx) => (
                 <img
                   key={idx}
-                  src={img}
+                  src={getImageSrc(img)}
                   alt={`${accessory.name} ${idx + 1}`}
                   className={`w-16 h-16 object-contain rounded-lg cursor-pointer border-2 transition-all duration-300 ${mainImage === img ? "border-blue-500 scale-110 shadow-lg" : "border-gray-200 hover:border-blue-400 hover:scale-105"}`}
                   onClick={() => setMainImage(img)}
@@ -461,9 +468,9 @@ function AccessoriesDetailsPage() {
         <h3 className="text-xl font-bold mb-4">Related Products & Accessories</h3>
         <div className="grid gap-4 md:grid-cols-2">
           {related.map((item) => {
+            // Stricter check for accessory
             const isAccessory = (item.model && item.model.toLowerCase() === 'accessory')
               || (item.type && item.type.toLowerCase() === 'accessory')
-              || (item._id && item._id.toString().length === 24 && item.price && item.stock !== undefined && item.brand && item.description && !item.hasOwnProperty('warranty'))
               || (item.category && item.category.toLowerCase().includes('accessor'));
             const itemId = item._id || item.id;
             const cartModel = isAccessory ? 'Accessory' : 'Product';

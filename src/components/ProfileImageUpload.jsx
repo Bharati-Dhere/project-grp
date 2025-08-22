@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 
 function ProfileImageUpload({ user, onImageUpdate }) {
+  // Helper to get correct image src
+  const getImageSrc = (imgPath) => {
+    if (!imgPath) return '';
+    if (imgPath.startsWith('http')) return imgPath;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    return `${backendUrl}${imgPath}`;
+  };
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(user?.profileImage || '');
   const [loading, setLoading] = useState(false);
@@ -40,7 +47,7 @@ function ProfileImageUpload({ user, onImageUpdate }) {
 
   return (
     <div>
-      <img src={preview} alt="Profile" style={{ width: 120, height: 120, borderRadius: '50%' }} />
+  <img src={getImageSrc(preview)} alt="Profile" style={{ width: 120, height: 120, borderRadius: '50%' }} />
       <input type="file" accept="image/*" onChange={handleFileChange} />
       <button onClick={handleUpload} disabled={loading}>{loading ? 'Uploading...' : 'Upload'}</button>
       {error && <div style={{ color: 'red' }}>{error}</div>}
