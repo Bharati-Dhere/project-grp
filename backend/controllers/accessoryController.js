@@ -38,7 +38,20 @@ const Accessory = require('../models/Accessory');
 // Controller for managing accessories
 exports.getAllAccessories = async (req, res) => {
   try {
-    const accessories = await Accessory.find();
+    const { q } = req.query;
+    let query = {};
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      query = {
+        $or: [
+          { name: regex },
+          { brand: regex },
+          { category: regex },
+          { description: regex }
+        ]
+      };
+    }
+    const accessories = await Accessory.find(query);
     const accessoriesWithRatings = accessories.map(accessory => {
       const reviews = accessory.reviews || [];
       const ratings = accessory.ratings || [];
@@ -50,7 +63,6 @@ exports.getAllAccessories = async (req, res) => {
         avgRating: avgRating !== null ? Number(avgRating.toFixed(2)) : null,
         ratingCount,
       };
-
     });
     res.json({ success: true, message: 'Accessories fetched', data: accessoriesWithRatings });
   } catch (err) {

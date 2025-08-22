@@ -42,7 +42,7 @@ function ProductDetails() {
 
   // Fetch product, reviews, related, cart, wishlist
   useEffect(() => {
-    const API_BASE = 'https://project-grp.onrender.com/api';
+  const API_BASE = 'http://localhost:5000/api';
     async function fetchAll() {
       try {
         const res = await fetch(`${API_BASE}/products/${id}`);
@@ -122,7 +122,7 @@ function ProductDetails() {
       } else if (user?.avatar && user.avatar.trim() !== '') {
         avatar = user.avatar;
       }
-      await fetch(`https://project-grp.onrender.com/api/products/${id}/rate`, {
+  await fetch(`http://localhost:5000/api/products/${id}/rate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user: user.email, value: userRating, review: userReview, avatar })
@@ -131,7 +131,7 @@ function ProductDetails() {
       setUserReview("");
       setTimeout(() => setShowToast(false), 3000);
       // Refetch product to update rating and reviews
-  const res = await fetch(`https://project-grp.onrender.com/api/products/${id}`);
+  const res = await fetch(`http://localhost:5000/api/products/${id}`);
   const data = await res.json();
       // Patch: If reviews exist, ensure each review has avatar fallback for rendering
       if (data.reviews && Array.isArray(data.reviews)) {

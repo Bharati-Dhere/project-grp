@@ -2,7 +2,20 @@ const Product = require('../models/Product');
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find();
+    const { q } = req.query;
+    let query = {};
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      query = {
+        $or: [
+          { name: regex },
+          { brand: regex },
+          { category: regex },
+          { description: regex }
+        ]
+      };
+    }
+    const products = await Product.find(query);
     const productsWithRatings = products.map(product => {
       const reviews = product.reviews || [];
       const ratings = product.ratings || [];

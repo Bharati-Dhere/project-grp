@@ -135,30 +135,20 @@ export default function ProductCard({
     ) {
       return;
     }
-    const productId = product._id || product.id;
-    // Robust detection: always route to /accessory/:id if product is an accessory
-    const isAccessory = (product.model && product.model.toLowerCase() === 'accessory')
-      || (product.type && product.type.toLowerCase() === 'accessory')
-      || (product.category && product.category.toLowerCase().includes('accessor'));
-    if (isAccessory) {
+    const productId = product._id ? product._id : product.id;
+    // Always use detailsPath prop for routing, but force accessory detection for robustness
+    const isAccessory = [
+      product.model,
+      product.type,
+      product.category
+    ].some(
+      v => typeof v === 'string' && v.toLowerCase().includes('accessor')
+    );
+    if (isAccessory || detailsPath === 'accessory') {
       navigate(`/accessory/${productId}`);
       return;
     }
-    // Otherwise, use detailsPath
-    let path = detailsPath;
-    if (!detailsPath || detailsPath === '') {
-      path = 'productdetails';
-    }
-    if (path === 'productdetails') {
-      navigate(`/productdetails/${productId}`);
-    } else if (path === 'accessory') {
-      navigate(`/accessory/${productId}`);
-    } else if (path === 'accessorydetails' || path === 'accessories') {
-      navigate(`/accessories/${productId}`);
-    } else {
-      // fallback: try productdetails
-      navigate(`/productdetails/${productId}`);
-    }
+    navigate(`/productdetails/${productId}`);
   };
 
   // Use first image from images array if available, else fallback to product.image, else defaultAvatar
