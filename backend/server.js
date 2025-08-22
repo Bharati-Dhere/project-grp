@@ -26,7 +26,7 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://project-ece7nwubr-bharati-dheres-projects.vercel.app'
+    'https://project-grp.vercel.app'
   ],
   credentials: true
 }));
